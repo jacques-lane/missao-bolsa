@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a7de1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Missão Bolsa">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-192.png">
+<title>Missão Bolsa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)} body{margin:0} img{max-width:100%} [hidden]{display:none!important} *{box-sizing:border-box}
+/* Layout: a single trail ("trilha") column — kid picker on top, one task at a time, big tap targets. Painel do pai is a denser grid. */
+:root{
+  --bg:#f3f6fb; --surface:#ffffff; --ink:#1d2433; --muted:#5d6678; --line:#dde3ee;
+  --maia:#8e5bd0; --maia-soft:#efe6fb; --jaq:#2a7de1; --jaq-soft:#e2eefc;
+  --good:#1f9d63; --good-soft:#e1f5ea; --bad:#d64545; --bad-soft:#fbe6e6; --gold:#e3a008;
+  --accent:var(--jaq); --accent-soft:var(--jaq-soft);
+  --font-display:"Fredoka","Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Nunito","Segoe UI",system-ui,sans-serif;
+  --r:16px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121722; --surface:#1b2230; --ink:#eef1f7; --muted:#a3acbd; --line:#2c3546;
+  --maia:#c4a2f5; --maia-soft:#2e2442; --jaq:#5aa2ff; --jaq-soft:#1c2c45;
+  --good:#3ccf8a; --good-soft:#163527; --bad:#ff7070; --bad-soft:#3d1f22; --gold:#f5c044; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121722; --surface:#1b2230; --ink:#eef1f7; --muted:#a3acbd; --line:#2c3546;
+  --maia:#c4a2f5; --maia-soft:#2e2442; --jaq:#5aa2ff; --jaq-soft:#1c2c45;
+  --good:#3ccf8a; --good-soft:#163527; --bad:#ff7070; --bad-soft:#3d1f22; --gold:#f5c044; color-scheme:dark}
+body.k-maia{--accent:var(--maia);--accent-soft:var(--maia-soft)}
+body.k-jaquinho{--accent:var(--jaq);--accent-soft:var(--jaq-soft)}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--font-body);font-size:17px;line-height:1.5;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--font-display);line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:30px;font-weight:700}
+h2{font-size:22px;font-weight:600}
+h3{font-size:18px;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{flex:none}
+.kids{display:flex;gap:8px}
+.kid{font:700 16px var(--font-body);border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 16px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.kid .dot{width:12px;height:12px;border-radius:50%}
+.kid[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.tab{font:700 15px var(--font-body);border:0;background:transparent;color:var(--muted);padding:10px 14px;border-radius:12px;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 0 var(--line),0 0 0 1px var(--line)}
+button:focus-visible,.opt:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px}
+.hero{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
+.hero .stats{display:flex;gap:10px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:14px;padding:6px 12px;border-radius:999px;background:var(--accent-soft);color:var(--ink);font-variant-numeric:tabular-nums}
+.btn{font:700 17px var(--font-body);border:0;border-radius:14px;padding:14px 22px;cursor:pointer;background:var(--accent);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.progress{height:10px;background:var(--line);border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;color:var(--muted);font-size:14px}
+.tag{font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--ink)}
+.texto{background:var(--bg);border-left:4px solid var(--accent);padding:12px 14px;border-radius:10px;font-size:16px}
+.qtext{font-size:20px;font-weight:700}
+.opts{display:grid;gap:10px}
+.opt{font:600 18px var(--font-body);text-align:left;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;gap:12px;align-items:center}
+.opt .l{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--bg);font-weight:800;font-size:15px}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.ok{border-color:var(--good);background:var(--good-soft)}
+.opt.no{border-color:var(--bad);background:var(--bad-soft)}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.tag.ref{background:#f6ead0;color:#7a4f00}
+.opt:disabled{cursor:default}
+.feedback{border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.feedback.ok{background:var(--good-soft)}
+.feedback.no{background:var(--bad-soft)}
+.feedback b{font-family:var(--font-display);font-size:19px}
+.big{font-family:var(--font-display);font-size:56px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.stars{display:flex;gap:6px}
+.skills{display:grid;gap:10px}
+.skill{display:grid;grid-template-columns:minmax(0,1fr) 110px 56px;gap:10px;align-items:center;font-size:15px}
+.skill .bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.skill .bar i{display:block;height:100%;border-radius:999px}
+.skill .v{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.badge{font-size:12px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.b0{background:var(--line);color:var(--muted)}
+.b1{background:var(--bad-soft);color:var(--bad)}
+.b2{background:#f6ead0;color:#8a5a00}
+.b3{background:var(--good-soft);color:var(--good)}
+:root[data-theme="dark"] .b2{background:#3b3017;color:var(--gold)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .b2{background:#3b3017;color:var(--gold)}}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.lesson{border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.lesson.focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.ex{background:var(--bg);border-radius:10px;padding:10px 12px;font-size:15px}
+.dica{font-size:15px;color:var(--muted)}
+details.mais{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px}
+details.mais > summary,details.resp > summary{cursor:pointer;font-weight:800;color:var(--accent);list-style:revert}
+details.mais h4{font-family:var(--font-display);font-size:16px;margin:12px 0 4px}
+details.mais ol,details.mais ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+details.mais .ex{margin-top:6px}
+details.resp{background:var(--accent-soft);border-radius:10px;padding:8px 12px;margin-top:6px}
+.pratica{align-self:flex-start;font-size:15px;padding:10px 14px;margin-top:4px}
+.chart{width:100%;height:auto}
+.note{font-size:13px;color:var(--muted)}
+.focuslist{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.focuslist li{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{font:700 14px var(--font-body);border:0;background:var(--surface);color:var(--ink);padding:8px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+[hidden]{display:none!important}
+.opt.pend{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 18%,var(--surface))}
+.pressa{border:2px solid var(--gold);border-radius:12px;padding:10px 12px;font-weight:700;background:color-mix(in srgb,var(--gold) 12%,var(--surface))}
+.extra{border:2px dashed var(--accent);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
+.extra h4{font-family:var(--font-display);font-size:16px;margin:4px 0 0}
+.links{font-size:14px;color:var(--muted)} .links a{color:var(--accent);font-weight:700}
+.tblw{overflow-x:auto} table.tbl{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+table.tbl th,table.tbl td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap} table.tbl th{color:var(--muted);font-weight:700}
+.login{max-width:420px;margin:24px auto;width:100%}
+.login label{display:flex;flex-direction:column;gap:6px;font-weight:700}
+.login input{font:600 18px var(--font-body);padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+.login input:focus{outline:none;border-color:var(--accent)}
+.erro{color:var(--bad);font-weight:700;min-height:1.2em}
+.userbox{display:flex;gap:8px;align-items:center}
+.mini{font:700 14px var(--font-body);border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+@media (max-width:560px){.grid2{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.skill{grid-template-columns:minmax(0,1fr) 70px 48px}h1{font-size:25px}.qtext{font-size:18px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="var(--accent)"/><path d="M20 8l3.6 7.4 8.1 1.2-5.9 5.7 1.4 8.1L20 26.6l-7.2 3.8 1.4-8.1-5.9-5.7 8.1-1.2z" fill="#fff"/></svg>
+      <div><h1>Missão Bolsa</h1><p class="muted" id="sub">Treino diário de Português e Matemática</p></div>
+    </div>
+    <div class="kids" role="group" aria-label="Quem vai treinar">
+      <button class="kid" id="kid-maia" data-kid="maia"><span class="dot" style="background:var(--maia)"></span>Maya</button>
+      <button class="kid" id="kid-jaquinho" data-kid="jaquinho"><span class="dot" style="background:var(--jaq)"></span>Jaquinho</button>
+    </div>
+    <div class="userbox" id="userbox" hidden><span class="pill" id="quem"></span><button class="mini" id="sair">Sair</button></div>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-treino" data-view="treino">Treino do dia</button>
+    <button class="tab" role="tab" id="tab-evolucao" data-view="evolucao">Minha evolução</button>
+    <button class="tab" role="tab" id="tab-estudar" data-view="estudar">Para estudar</button>
+    <button class="tab" role="tab" id="tab-painel" data-view="painel">Painel do pai</button>
+  </nav>
+  <main id="view"></main>
+  <p class="note" id="savenote">Carregando o histórico…</p>
+</div>
+
+<script>
+/* ================= utilidades ================= */
+const $ = s => document.querySelector(s);
+const rnd = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const N = n => Number(n).toLocaleString('pt-BR');
+const gcd = (a,b) => b ? gcd(b,a%b) : a;
+const lcm = (a,b) => a/gcd(a,b)*b;
+const reais = c => 'R$ ' + (c/100).toFixed(2).replace('.',',');
+const dec2 = c => (c/100).toFixed(2).replace('.',',');
+const hora = m => { const h=Math.floor(m/60)%24, mm=m%60; return h+'h'+String(mm).padStart(2,'0'); };
+const frac = (n,d) => { const g=gcd(Math.abs(n),Math.abs(d)); n/=g; d/=g; return d===1 ? String(n) : n+'/'+d; };
+const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Monta uma questão de múltipla escolha a partir da resposta certa e de erros comuns. */
+function autoFill(c){
+  const m=c.match(/^(R\$ )?([\d.]+(?:,\d+)?)(.*)$/); if(!m || m[3].startsWith('/')) return null;
+  const dec=(m[2].split(',')[1]||'').length, v=parseFloat(m[2].replace(/\./g,'').replace(',','.'));
+  const step = dec ? 1 : Math.max(1, Math.round(Math.abs(v)*0.1));
+  return k => { const nv=v+(k%2?1:-1)*step*Math.ceil(k/2); if(nv<0) return '-'; return (m[1]||'')+(dec? nv.toFixed(dec).replace('.',',') : N(nv))+m[3]; };
+}
+function mc(correct, wrongs, fill){
+  const c = String(correct); fill = fill || autoFill(c); const set = new Set([c]); const opts=[c];
+  for(const w of wrongs){ const s=String(w); if(!set.has(s) && s!=='NaN' && !/^(R\$ )?-/.test(s)){ set.add(s); opts.push(s); } if(opts.length===4) break; }
+  let k=1; while(opts.length<4 && fill){ const s=String(fill(k++)); if(!set.has(s) && !/^(R\$ )?-/.test(s)){ set.add(s); opts.push(s);} if(k>40) break; }
+  const sh = shuffle(opts); return { options: sh, a: sh.indexOf(c) };
+}
+
+/* ================= perfis ================= */
+const KIDS = {
+  maia: { nome:'Maya', serieDefault:4, ola:'Oi, linda do papai!',
+    vivas:['Arrasou, linda do papai!','Acertou! Isso merece um brigadeiro (o papai vai querer metade).','Resposta mais caprichada que make de festa!','Tocou certinho, igual no órgão!','Linda e inteligente! Agora o papai não tem do que tirar sarro.','Essa foi de lamber os dedos!','A mamãe vai ficar toda orgulhosa!','Acertou! Conta pra mamãe no jantar.','Isso merece um reels com a mamãe!','Essa resposta viralizou!'],
+    forca:['Errou? O papai vai tirar sarro no jantar… Bora corrigir antes! Olha:','Quase, linda! Até a make mais caprichada precisa de retoque. Veja o truque:','Mais uma dessa e vai ter que trocar a fralda do James! Brincadeira… olha só:','A mamãe ia rir dessa… mas depois ia te explicar assim:','Errar faz parte, até da trend mais famosa. Olha o truque:'] },
+  jaquinho: { nome:'Jaquinho', serieDefault:7, ola:'E aí, Jaquinho? O papai está de olho.',
+    vivas:['Centrado como sempre.','O papai sério aprova.','Afinadíssimo, igual violino bem afinado.','Essa nem o Daniel errava. Ou errava?','Mandou bem, nível bolsa!','Isso que é raciocínio.','Até a mamãe ficou sem piada pra essa.','Com esse raciocínio, até a mamãe ia te chamar para ajudar a dominar o mundo.'],
+    forca:['Errou essa? Amanhã vou pedir para a mamãe te levar na escola. Brincadeira… olha o truque:','Essa o Daniel chutaria. Você é mais centrado, olha:','Errou? Hoje é você quem dá a mamadeira pro James, com ele segurando no seu braço. Veja o truque:','Desafinou um pouquinho. Afina assim:','Errou? A mamãe vai fazer piada disso no café da manhã. Antes, olha o truque:'] }
+};
+
+/* ================= habilidades ================= */
+const SKILLS = {
+  maia: {
+    valor_posicional:{nome:'Valor posicional',mat:true}, adicao:{nome:'Adição',mat:true}, subtracao:{nome:'Subtração',mat:true},
+    multiplicacao:{nome:'Multiplicação',mat:true}, divisao:{nome:'Divisão',mat:true}, fracoes:{nome:'Frações',mat:true},
+    dinheiro:{nome:'Dinheiro e troco',mat:true}, tempo:{nome:'Horas e minutos',mat:true}, perimetro:{nome:'Perímetro',mat:true},
+    ortografia:{nome:'Ortografia'}, pontuacao:{nome:'Pontuação'}, classes:{nome:'Tipos de palavras'},
+    sinonimos:{nome:'Sinônimos e antônimos'}, plural:{nome:'Singular e plural'}, interpretacao:{nome:'Interpretação de texto'}
+  },
+  jaquinho: {
+    expressoes:{nome:'Expressões numéricas',mat:true}, potencias:{nome:'Potências',mat:true}, mmc_mdc:{nome:'MMC e MDC',mat:true},
+    fracoes_soma:{nome:'Soma de frações',mat:true}, fracao_quantidade:{nome:'Fração de quantidade',mat:true}, decimais:{nome:'Números decimais',mat:true},
+    porcentagem:{nome:'Porcentagem',mat:true}, area:{nome:'Área',mat:true}, divisibilidade:{nome:'Divisibilidade',mat:true},
+    interpretacao:{nome:'Interpretação de texto'}, classes:{nome:'Classes de palavras'}, ortografia:{nome:'Ortografia'},
+    acentuacao:{nome:'Acentuação'}, concordancia:{nome:'Concordância'}, sentido:{nome:'Linguagem figurada'},
+    pontuacao:{nome:'Pontuação'}, verbos:{nome:'Verbos'}
+  }
+};
+
+/* ================= geradores de Matemática ================= */
+const casas = ['unidades','dezenas','centenas','unidades de milhar','dezenas de milhar'];
+const GEN = {
+  maia: {
+    valor_posicional(L){
+      let n,ds,i,d;
+      do{ n = L>=5 ? rnd(10000,99999) : rnd(1000,9999); ds=String(n).split('').map(Number); i=rnd(0,ds.length-2); d=ds[i]; }while(d===0 || ds.filter(x=>x===d).length>1);
+      const pos = ds.length-1-i, v = d*10**pos;
+      return { q:`No número ${N(n)}, quanto vale o algarismo ${d}?`, ...mc(N(v),[N(d),N(d*10**(pos-1)),N(d*10**(pos+1))]),
+        ex:`O ${d} está na casa das ${casas[pos]}. Por isso ele vale ${N(v)}.` };
+    },
+    adicao(L){
+      let a,b; do{ a = L>=5?rnd(1000,6999):rnd(120,799); b = L>=5?rnd(1000,2999):rnd(110,199+L*20); }while((a%10+b%10)<10);
+      const s=a+b; const A=String(a).padStart(5,'0'), B=String(b).padStart(5,'0'); let sv=''; for(let k=0;k<5;k++) sv+=(+A[k]+ +B[k])%10; const semVaiUm=+sv;
+      const v = pick([`Para a festa, a confeitaria fez ${N(a)} brigadeiros de manhã e ${N(b)} à tarde. Quantos brigadeiros ao todo?`,`O reels da Maya com a mamãe teve ${N(a)} curtidas no sábado e ${N(b)} no domingo. Quantas curtidas ao todo?`,`No recital de órgão, ${N(a)} pessoas vieram no sábado e ${N(b)} no domingo. Quantas pessoas no total?`,`Quanto é ${N(a)} + ${N(b)}?`]);
+      return { q:v, ...mc(N(s),[N(semVaiUm),N(s+10),N(s-10),N(s+100)]), ex:`${N(a)} + ${N(b)} = ${N(s)}. Quando a soma de uma coluna passa de 9, o "vai um" sobe para a coluna da esquerda.` };
+    },
+    subtracao(L){
+      let a,b; do{ a=L>=5?rnd(2000,9999):rnd(300,999); b=L>=5?rnd(1000,a-100):rnd(100,a-40); }while(a%10>=b%10);
+      const r=a-b; const A=String(a),B=String(b).padStart(A.length,'0'); let w=''; for(let k=0;k<A.length;k++) w+=Math.abs(+A[k]-+B[k]);
+      return { q:pick([`Quanto é ${N(a)} − ${N(b)}?`,`Uma loja tinha ${N(a)} esmaltes e vendeu ${N(b)}. Quantos esmaltes sobraram?`]), ...mc(N(r),[N(+w),N(r+10),N(r-10),N(r+100)]),
+        ex:`${N(a)} − ${N(b)} = ${N(r)}. Quando o número de cima é menor, a gente "pede emprestado" 1 da coluna vizinha. Não vale só trocar a ordem!` };
+    },
+    multiplicacao(L){
+      const x = L>=5?rnd(12,48):rnd(3,9), y=rnd(6,9), p=x*y;
+      return { q:pick([`Quanto é ${x} × ${y}?`,`Cada caixinha tem ${y} brigadeiros. Quantos brigadeiros há em ${x} caixinhas?`,`O James foge da cama dele e vai para a cama do papai e da mamãe ${y} vezes por semana. Em ${x} semanas, quantas vezes ele fugiu?`,`Na loja, a mamãe colocou ${y} flores em cada vaso. Quantas flores ela usou em ${x} vasos?`]), ...mc(p,[p+y,p-y,x+y,p+x]),
+        ex:`${x} × ${y} = ${p}. Multiplicar é somar parcelas iguais: ${y} somado ${x} vezes.` };
+    },
+    divisao(L){
+      const d=rnd(3,9), q=rnd(4,L>=5?25:12), n=d*q;
+      return { q:pick([`${n} adesivos de maquiagem foram divididos igualmente entre ${d} amigas. Quantos ficaram com cada uma?`,`${n} pedaços de pizza foram divididos igualmente entre ${d} pessoas. Quantos pedaços para cada uma?`,`A mamãe tem ${n} rosas e quer montar ${d} buquês iguais. Quantas rosas vão em cada buquê?`]), ...mc(q,[q+1,q-1,n-d,q+2]),
+        ex:`${n} ÷ ${d} = ${q}, porque ${d} × ${q} = ${n}. Para conferir uma divisão, multiplique de volta.` };
+    },
+    fracoes(L){
+      const opts=[[2,'a metade'],[3,'a terça parte'],[4,'a quarta parte'],[5,'a quinta parte']];
+      const [den,nome]=pick(L>=5?opts:opts.slice(0,3)); const tot=den*rnd(2,10), r=tot/den;
+      if(L>=5 && Math.random()<.5){ const num=rnd(2,den-1||2); if(num<den){ const rr=r*num; return { q:`Quanto é ${num}/${den} de ${tot}?`, ...mc(rr,[r,rr+r,tot-rr,tot/num]), ex:`Primeiro divide por ${den}: ${tot} ÷ ${den} = ${r}. Depois multiplica por ${num}: ${r} × ${num} = ${rr}.` }; } }
+      return { q:pick([`Quanto é ${nome} de ${tot}?`,`A Maya e o papai apostaram quem come mais. Numa travessa com ${tot} pães de queijo, a Maya comeu ${nome}. Quantos ela comeu?`]), ...mc(r,[tot/(den===2?4:2),tot-den,r*2,r+1]), ex:`${nome[0].toUpperCase()+nome.slice(1)} é dividir em ${den} partes iguais: ${tot} ÷ ${den} = ${r}.` };
+    },
+    dinheiro(L,nv=3){
+      let p;
+      if(nv===1) p = rnd(2, L>=5?45:18)*100;                                   // degrau 1: só reais inteiros
+      else if(nv===2) p = rnd(2, L>=5?45:18)*100 + pick([0,50,50]);           // degrau 2: ,00 ou ,50
+      else p = rnd(L>=5?520:150, L>=5?4790:1890);                             // degrau 3: centavos quebrados
+      if(nv<3){ const nota=[5,10,20,50,100].find(n=>n*100>p); const t=nota*100-p;
+        return { q:`${pick(['Um batom','Um esmalte','Um pastel','Uma tiara','Um sorvete','Um vasinho na loja da mamãe','Um brinquedo para o James'])} custou ${reais(p)}. Pagando com uma nota de ${reais(nota*100).replace(',00','')}, qual é o troco?`, ...mc(reais(t),[reais(t+100),reais(t-100),reais(t+200),reais(t+50),reais(t-50)]),
+          ex: nv===1 ? `Conte nos dedos a partir do preço até a nota: de ${reais(p)} até ${reais(nota*100)} faltam ${reais(t)}. Troco = ${reais(nota*100)} − ${reais(p)} = ${reais(t)}.` : `Complete primeiro até o real inteiro e depois até a nota: ${reais(nota*100)} − ${reais(p)} = ${reais(t)}.` }; }
+      let nota=[5,10,20,50,100].find(n=>n*100>p+40); const t=nota*100-p;
+      return { q:`${pick(['Um batom','Um esmalte','Um pastel','Uma tiara','Um sorvete','Um vasinho na loja da mamãe'])} custou ${reais(p)}. Pagando com uma nota de ${reais(nota*100).replace(',00','')}, qual é o troco?`, ...mc(reais(t),[reais(t+100),reais(t-10),reais(t+10),reais(t-100)]),
+        ex:`Troco = valor pago − preço: ${reais(nota*100)} − ${reais(p)} = ${reais(t)}.` };
+    },
+    tempo(L){
+      const ini = rnd(8,17)*60 + pick([0,10,15,20,30,40,45,50]); const dur = pick(L>=5?[35,45,55,75,90,105]:[25,30,40,45,50]); const fim=ini+dur;
+      return { q:pick([`A aula de órgão começou às ${hora(ini)} e durou ${dur} minutos. A que horas terminou?`,`A Maya começou a se arrumar para a festa às ${hora(ini)} e levou ${dur} minutos. A que horas ficou pronta?`,`A Maya e a mamãe começaram a gravar uma trend às ${hora(ini)} e, entre um erro e outro, levaram ${dur} minutos. A que horas terminaram?`]), ...mc(hora(fim),[hora(fim+10),hora(fim-10),hora(fim+60),hora(fim-60)]),
+        ex:`${hora(ini)} + ${dur} min = ${hora(fim)}. Lembre: 60 minutos fazem 1 hora.` };
+    },
+    perimetro(L){
+      let w=rnd(3,12),h=rnd(2,9); if(w===h) w++;
+      const p=2*(w+h);
+      return { q:`O tapete do quarto da Maya é retangular: ${w} dm de comprimento e ${h} dm de largura. Quantos decímetros de fita são precisos para contornar o tapete todo?`, ...mc(p,[w*h,w+h,2*w+h,p+2]),
+        ex:`Perímetro é a volta inteira: ${w} + ${h} + ${w} + ${h} = ${p} dm. (A área seria ${w} × ${h} = ${w*h} dm², que é outra coisa.)` };
+    }
+  },
+  jaquinho: {
+    expressoes(){
+      if(Math.random()<.5){ const a=rnd(5,20),b=rnd(2,9),c=rnd(2,9),d=rnd(1,9); const r=a+b*c-d;
+        return { q:pick([`Quanto vale a expressão ${a} + ${b} × ${c} − ${d}?`,`O Daniel fez ${a} + ${b} × ${c} − ${d} da esquerda para a direita e deu ${(a+b)*c-d}. Qual é o resultado certo?`]), ...mc(r,[(a+b)*c-d,a+b*(c-d),a+b+c-d,r+c]),
+          ex:`Primeiro a multiplicação: ${b} × ${c} = ${b*c}. Depois, da esquerda para a direita: ${a} + ${b*c} − ${d} = ${r}. A ordem certa é: parênteses, potências, × e ÷, e só depois + e −.` }; }
+      const a=rnd(3,12),b=rnd(3,9),d=rnd(2,6),k=rnd(2,9),c=d*k; const r=a*b-k;
+      return { q:`Quanto vale a expressão ${a} × ${b} − ${c} ÷ ${d}?`, ...mc(r,[a*b-c,a*b+k,(a*b-c)%d===0?(a*b-c)/d:r+d,r-1]),
+        ex:`× e ÷ vêm antes de −: ${a} × ${b} = ${a*b} e ${c} ÷ ${d} = ${k}. Depois: ${a*b} − ${k} = ${r}.` };
+    },
+    potencias(){
+      const b=rnd(2,9), e = b>5?2:rnd(2,3), r=b**e;
+      return { q:`Quanto é ${b}${e===2?'²':'³'}?`, ...mc(r,[b*e,b+e,e**b<2000?e**b:r+b,b**(e+1)]),
+        ex:`${b}${e===2?'²':'³'} = ${Array(e).fill(b).join(' × ')} = ${r}. Potência é multiplicar a base por ela mesma, e não base × expoente.` };
+    },
+    mmc_mdc(){
+      const pares=[[4,6],[6,8],[4,10],[6,9],[8,12],[10,15],[6,10],[9,12],[12,18],[4,14],[15,20]]; const [a,b]=pick(pares);
+      if(Math.random()<.55){ const r=lcm(a,b);
+        return { q:pick([`No sítio dos avós, em Juquiá, o Jaquinho e o Daniel apostam corrida no pasto. O Jaquinho completa uma volta a cada ${a} minutos e o Daniel a cada ${b}. Saindo juntos, daqui a quantos minutos passam juntos pela largada de novo?`,`Dois ônibus saem juntos do terminal. Um passa a cada ${a} minutos e o outro a cada ${b}. Daqui a quantos minutos vão sair juntos de novo?`,`Na loja, a mamãe rega uma planta a cada ${a} dias e aduba a cada ${b} dias. Hoje ela fez as duas coisas. Daqui a quantos dias vai fazer as duas no mesmo dia de novo?`]), ...mc(r,[a*b,gcd(a,b),r*2,a+b]),
+          ex:`É o MMC (menor múltiplo comum) de ${a} e ${b}. Múltiplos de ${a}: ${[1,2,3,4,5].map(i=>a*i).join(', ')}… O primeiro que também é múltiplo de ${b} é ${r}.` }; }
+      const r=gcd(a*2,b*2), A=a*2, B=b*2;
+      return { q:`Para a turma do Renascer, o Jaquinho quer montar saquinhos iguais com ${A} balas e ${B} pirulitos, sem sobrar nada, com o maior número possível de saquinhos. Quantos saquinhos?`, ...mc(r,[lcm(A,B),Math.min(A,B),r*2,r/2]),
+        ex:`É o MDC (maior divisor comum) de ${A} e ${B}: o maior número que divide os dois. ${A} ÷ ${r} = ${A/r} e ${B} ÷ ${r} = ${B/r}.` };
+    },
+    fracoes_soma(){
+      let b,d; do{ b=pick([2,3,4,5,6]); d=pick([2,3,4,5,6]); }while(b===d);
+      const a=rnd(1,b-1), c=rnd(1,d-1); const n=a*d+c*b, m=b*d;
+      return { q:`Quanto é ${a}/${b} + ${c}/${d}?`, ...mc(frac(n,m),[frac(a+c,b+d),frac(a+c,b*d),frac(n,b+d),frac(n+1,m)]),
+        ex:`Com denominadores diferentes, primeiro deixe os dois iguais: ${a}/${b} = ${a*d}/${m} e ${c}/${d} = ${c*b}/${m}. Somando: ${n}/${m}${frac(n,m)!==n+'/'+m?' = '+frac(n,m):''}. Nunca some os de baixo!` };
+    },
+    fracao_quantidade(){
+      const den=pick([3,4,5,8,10]), num=rnd(2,den-1), tot=den*rnd(2,12), r=tot/den*num;
+      return { q:pick([`Quanto é ${num}/${den} de ${tot}?`,`Na festa no sítio dos avós havia ${tot} convidados, e ${num}/${den} eram primos do Jaquinho. Quantos primos estavam lá?`,`Um pacote tem ${tot} fraldas do James e ${num}/${den} já foram usadas (o James não perdoa). Quantas fraldas foram usadas?`,`A mamãe, que quer dominar o mundo, anotou ${tot} tarefas para a semana: casa, duas lojas, marketing e ainda ajudar os outros. Ela terminou ${num}/${den} delas. Quantas tarefas ela terminou?`]), ...mc(r,[tot/den,r+tot/den,tot-r,tot*num]),
+        ex:`Divide pelo de baixo e multiplica pelo de cima: ${tot} ÷ ${den} = ${tot/den}; ${tot/den} × ${num} = ${r}.` };
+    },
+    decimais(){
+      const x=rnd(105,989), y=rnd(11,99)*10; const s=x+y; const errado = x + y/10;
+      return { q:`Quanto é ${dec2(x)} + ${(y/100).toFixed(1).replace('.',',')}?`, ...mc(dec2(s),[dec2(errado),dec2(s+100),dec2(s-10),dec2(s+10)]),
+        ex:`Alinhe as vírgulas! ${dec2(x)} + ${dec2(y)} = ${dec2(s)}. Completar com zero ajuda: ${(y/100).toFixed(1).replace('.',',')} = ${dec2(y)}.` };
+    },
+    porcentagem(){
+      const p=pick([10,20,25,50,75,30]); const base = (p===25||p===75)?4:10; const tot=base*rnd(3,30)*(p===50?2:1); const d=tot*p/100;
+      if(Math.random()<.5) return { q:`Um jogo de cordas de violino custa R$ ${N(tot)} e está com ${p}% de desconto. De quanto é o desconto?`, ...mc('R$ '+N(d),['R$ '+N(p),'R$ '+N(tot-d),'R$ '+N(tot*p/10),'R$ '+N(d+10)]),
+        ex:`${p}% significa ${p} de cada 100. ${p}% de ${N(tot)} = ${N(tot)} × ${p} ÷ 100 = ${N(d)}.` };
+      return { q:pick([`Um estojo de violino custa R$ ${N(tot)} e está com ${p}% de desconto. Quanto vai custar?`,`Na promoção da loja da mamãe, um arranjo de R$ ${N(tot)} sai com ${p}% de desconto. Quanto o cliente vai pagar?`,`O reels de trend da mamãe e da Maya custou R$ ${N(tot)} em impulsionamento, e a mamãe ganhou ${p}% de desconto. Quanto ela pagou?`]), ...mc('R$ '+N(tot-d),['R$ '+N(d),'R$ '+N(tot-p),'R$ '+N(tot+d),'R$ '+N(tot-d+10)]),
+        ex:`Desconto: ${p}% de ${N(tot)} = ${N(d)}. Preço final: ${N(tot)} − ${N(d)} = ${N(tot-d)}.` };
+    },
+    area(){
+      if(Math.random()<.5){ let w=rnd(4,15),h=rnd(3,12); if(w===h) w++; const A=w*h;
+        return { q:pick([`Qual é a área de um retângulo de ${w} cm por ${h} cm?`,`O Daniel jura que a área de um retângulo de ${w} cm por ${h} cm é ${2*(w+h)} cm². O Daniel sendo o Daniel… Qual é a área de verdade?`]), ...mc(A+' cm²',[2*(w+h)+' cm²',(w+h)+' cm²',(A*2)+' cm²',(A+w)+' cm²']), ex:`Área do retângulo = base × altura = ${w} × ${h} = ${A} cm². (A volta, ${2*(w+h)} cm, é o perímetro.)` }; }
+      let b,h; do{ b=rnd(4,14); h=rnd(3,10); }while((b*h)%2); const A=b*h/2;
+      return { q:`Qual é a área de um triângulo com base ${b} cm e altura ${h} cm?`, ...mc(A+' cm²',[b*h+' cm²',(b+h)+' cm²',(A+b)+' cm²',(A-1)+' cm²']), ex:`Área do triângulo = base × altura ÷ 2 = ${b} × ${h} ÷ 2 = ${A} cm². O triângulo é metade de um retângulo!` };
+    },
+    divisibilidade(){
+      const k=pick([2,3,4,5,9]); const regras={2:'termina em número par',3:'a soma dos algarismos é múltiplo de 3',4:'os dois últimos algarismos formam um múltiplo de 4',5:'termina em 0 ou 5',9:'a soma dos algarismos é múltiplo de 9'};
+      let c; do{ c=rnd(100,999); }while(c%k); const ws=new Set(); while(ws.size<3){ const w=rnd(100,999); if(w%k) ws.add(w); }
+      return { q:`Qual destes números é divisível por ${k}?`, ...mc(c,[...ws]), ex:`Um número é divisível por ${k} quando ${regras[k]}. ${c} ÷ ${k} = ${c/k}.` };
+    }
+  }
+};
+
+/* ================= banco de Português ================= */
+const TX = {
+  m1:'Bia plantou uma semente de girassol no vaso da janela. Todos os dias ela regava a terra e esperava. Depois de duas semanas, apareceu um broto verdinho. Bia correu para contar ao avô, que sorriu e disse: — A paciência sempre floresce.',
+  m2:'O time da escola perdeu o primeiro jogo do campeonato. Na segunda-feira, Léo propôs que todos treinassem no recreio. Na semana seguinte, o time venceu por 3 a 1, e o gol da vitória foi de Léo.',
+  j1:'Quando a internet caiu, a família inteira ficou perdida. Meu irmão andava pela casa com o celular erguido, procurando sinal como quem procura tesouro. Minha mãe, sem a receita do vídeo, ligou para a vovó. Em dez minutos, a cozinha cheirava a bolo de fubá, e ninguém lembrou mais do wi-fi.',
+  m3:'No domingo, a Maya e o papai fizeram uma aposta: quem comeria mais pastéis na feira. O papai comeu quatro e ficou cheio. A Maya comeu três, deu uma risadinha e disse: — Perdi a aposta, mas guardei espaço para a sobremesa! Os dois voltaram para casa rindo e dividiram um pote de açaí.',
+  j3:'Nas férias, no sítio dos avós, o Daniel inventou de fazer um show no galinheiro. Subiu num balde, abriu os braços e cantou tão alto que as galinhas saíram correndo. O Jaquinho, mais calmo, pegou o violino e tocou uma música suave. Aos poucos, as galinhas voltaram. A avó, rindo na porta da cozinha, disse que o neto tinha o dom de acalmar até bicho assustado.',
+  m4:'No sábado, a Maya foi ajudar a mamãe na loja. A mamãe deixou ela escolher as fitas dos buquês, e a Maya escolheu todas cor-de-rosa. Quando uma cliente perguntou quem tinha feito aquele laço tão bonito, a mamãe piscou e disse: — Foi a minha assistente especial! A Maya ficou vermelha de orgulho.',
+  j4:'Lá em casa, o papai é o sério e a mamãe é a brincalhona. Quando o Jaquinho esqueceu a partitura do violino, o papai lembrou com calma da responsabilidade. Já a mamãe inventou uma música sobre o "violinista sem partitura" e cantou o caminho inteiro até a escola. O Jaquinho fingiu que estava bravo, mas no fim estava rindo.',
+  m5:'A mamãe e a Maya adoram gravar reels juntas. No domingo, escolheram a trend mais famosa da semana. Na primeira vez, a Maya esqueceu o passo. Na segunda, a mamãe riu no meio. Na terceira, o James entrou correndo no vídeo. Só na quarta tentativa deu tudo certo, e as duas comemoraram pulando no sofá.',
+  j5:'A mamãe quer abraçar o mundo. Em um só dia, ela cuida da casa, do marido e de três filhos, passa nas duas lojas, faz o marketing e ainda ajuda uma vizinha. De tanta coisa ao mesmo tempo, às vezes fica meio avoada: procura o celular que está na mão dela. Mas, no fim do dia, quase tudo está feito, e ainda sobra um abraço para cada filho.',
+  j2:'As abelhas são responsáveis pela polinização de grande parte das plantas que viram alimento. Ao voar de flor em flor, levam o pólen de uma para outra, permitindo que se formem frutos e sementes. Por isso, a diminuição das abelhas preocupa cientistas no mundo todo.'
+};
+const PT = {
+  maia: [
+    ['ortografia','Qual palavra está escrita do jeito certo?',['cachorro','caxorro','cachoro','caichorro'],'Entre duas vogais, o "rr" faz o som forte. E cachorro se escreve com "ch".'],
+    ['ortografia','Complete: o pá__aro voou alto.',['ss','s','ç','c'],'Entre vogais, um "s" sozinho tem som de "z" (casa). Para som de "s", usamos "ss": pássaro.'],
+    ['ortografia','Complete: a crian__a brincou no parque.',['ç','ss','s','sc'],'Criança se escreve com "ç". O "ç" aparece antes de a, o e u.'],
+    ['ortografia','Qual palavra está escrita do jeito certo?',['campo','canpo','cãpo','camppo'],'Antes de "p" e "b", usamos "m", nunca "n": campo, sombra, tambor.'],
+    ['ortografia','Complete: a __uva molhou o quintal.',['ch','x','sh','cx'],'Chuva se escreve com "ch". Dica: chuva, chão, chave.'],
+    ['pontuacao','Qual sinal termina esta frase? "Você vai à escola amanhã__"',['?','.','!',','],'É uma pergunta, então termina com ponto de interrogação.'],
+    ['pontuacao','Qual sinal combina com uma frase de susto? "Que susto__"',['!','?','.',','],'O ponto de exclamação mostra emoção: susto, alegria, surpresa.'],
+    ['pontuacao','Na frase "Comprei maçã, banana, uva e pera", para que servem as vírgulas?',['Separar os itens de uma lista','Terminar a frase','Fazer uma pergunta','Mostrar emoção'],'A vírgula separa os itens de uma lista. Antes do "e", não precisa.'],
+    ['pontuacao','Qual sinal mostra que um personagem vai falar num diálogo?',['Travessão (—)','Ponto final','Vírgula','Ponto de interrogação'],'O travessão abre a fala do personagem: — Oi, tudo bem?'],
+    ['classes','Na frase "O gato preto dormiu", qual palavra é um adjetivo?',['preto','gato','dormiu','O'],'Adjetivo é a palavra que diz como algo é. "Preto" diz como é o gato.'],
+    ['classes','Na frase "O gato preto dormiu", qual palavra é o verbo?',['dormiu','gato','preto','O'],'Verbo indica ação. "Dormiu" é o que o gato fez.'],
+    ['classes','Qual destas palavras é um substantivo?',['escola','bonito','correr','devagar'],'Substantivo dá nome às coisas, pessoas e lugares: escola.'],
+    ['classes','Qual palavra indica uma ação?',['pular','mesa','feliz','azul'],'Pular é uma ação, então é um verbo.'],
+    ['classes','Em "A menina alegre cantou", qual palavra diz como a menina é?',['alegre','menina','cantou','A'],'"Alegre" é o adjetivo: diz como a menina é.'],
+    ['sinonimos','Qual palavra tem o mesmo sentido de "feliz"?',['contente','triste','bravo','cansado'],'Sinônimo é palavra de sentido parecido. Feliz = contente.'],
+    ['sinonimos','Qual é o contrário de "alto"?',['baixo','grande','comprido','largo'],'Antônimo é o contrário. Alto ↔ baixo.'],
+    ['sinonimos','Qual palavra tem o mesmo sentido de "veloz"?',['rápido','lento','pesado','calmo'],'Veloz = rápido.'],
+    ['sinonimos','Qual é o contrário de "aberto"?',['fechado','quebrado','vazio','limpo'],'Aberto ↔ fechado.'],
+    ['sinonimos','Qual palavra tem o mesmo sentido de "bonito"?',['belo','feio','sujo','fraco'],'Bonito = belo.'],
+    ['plural','Qual é o plural de "pão"?',['pães','pãos','pãoes','pãns'],'Algumas palavras com "ão" viram "ães" no plural: pão → pães, cão → cães.'],
+    ['plural','Qual é o plural de "flor"?',['flores','flors','floris','flôres'],'Palavras terminadas em "r" ganham "es": flor → flores.'],
+    ['plural','Qual é o plural de "animal"?',['animais','animals','animales','animaus'],'Terminou em "al"? Troca por "ais": animal → animais.'],
+    ['plural','Qual é o plural de "lápis"?',['lápis','lápises','lápiz','lápisis'],'"Lápis" não muda: um lápis, dois lápis.'],
+    ['interpretacao','O que a Bia plantou?',['Uma semente de girassol','Uma árvore','Uma rosa','Um feijão'],'O texto diz logo no começo: "uma semente de girassol".','m1'],
+    ['interpretacao','Quanto tempo demorou para aparecer o broto?',['Duas semanas','Dois dias','Um mês','Uma semana'],'Está no texto: "Depois de duas semanas".','m1'],
+    ['interpretacao','O que o avô quis dizer com "A paciência sempre floresce"?',['Que esperar com calma traz resultado','Que a planta ia morrer','Que a Bia regou demais','Que flor não cresce em vaso'],'O avô usa a flor como exemplo: quem espera com paciência vê o resultado.','m1'],
+    ['interpretacao','Quem deu a ideia de treinar no recreio?',['O Léo','O professor','O goleiro','A diretora'],'"Léo propôs que todos treinassem no recreio."','m2'],
+    ['interpretacao','Qual foi o placar da vitória?',['3 a 1','1 a 0','2 a 2','3 a 0'],'"O time venceu por 3 a 1."','m2'],
+    ['interpretacao','Qual é a principal mensagem do texto?',['Treinar e se esforçar ajuda a melhorar','Perder é sempre ruim','Só um jogador importa','Recreio é para descansar'],'O time perdeu, treinou e venceu: o esforço trouxe a vitória.','m2'],
+    ['interpretacao','Quem ganhou a aposta de quem comia mais pastéis?',['O papai','A Maya','Os dois empataram','Ninguém comeu'],'O papai comeu quatro e a Maya três. Ela mesma disse: "Perdi a aposta".','m3'],
+    ['interpretacao','Por que a Maya não ficou triste por perder?',['Porque guardou espaço para a sobremesa','Porque não gostava de pastel','Porque o papai deu um presente','Porque estava com sono'],'Ela disse: "guardei espaço para a sobremesa!". Leia a fala do personagem com atenção.','m3'],
+    ['interpretacao','Como os dois voltaram para casa?',['Rindo','Brigados','Chorando','Correndo'],'"Os dois voltaram para casa rindo."','m3'],
+    ['interpretacao','O que a mamãe deixou a Maya fazer na loja?',['Escolher as fitas dos buquês','Atender no caixa','Regar as plantas','Fechar a loja'],'"A mamãe deixou ela escolher as fitas dos buquês."','m4'],
+    ['interpretacao','Quando a mamãe chamou a Maya de "assistente especial", ela estava…',['elogiando a Maya','brigando com a Maya','falando de outra pessoa','pedindo ajuda à cliente'],'A cliente elogiou o laço, e a mamãe deu o crédito para a Maya. Foi um elogio.','m4'],
+    ['interpretacao','"A Maya ficou vermelha de orgulho" quer dizer que ela ficou…',['muito orgulhosa e um pouco envergonhada','com calor','com raiva','doente'],'Ficar vermelho aqui é sentir orgulho e vergonhinha ao mesmo tempo. Não é cor de verdade nem doença.','m4'],
+    ['interpretacao','Em qual tentativa a trend deu certo?',['Na quarta','Na primeira','Na segunda','Na terceira'],'Conte as tentativas: esqueceu o passo (1ª), a mamãe riu (2ª), o James entrou (3ª), deu certo (4ª).','m5'],
+    ['interpretacao','O que aconteceu na terceira tentativa?',['O James entrou correndo no vídeo','A mamãe riu','A Maya esqueceu o passo','O celular caiu'],'"Na terceira, o James entrou correndo no vídeo."','m5'],
+    ['interpretacao','O que o texto ensina sobre gravar uma trend?',['Que às vezes é preciso tentar várias vezes até dar certo','Que é melhor desistir na primeira','Que o James estraga tudo','Que trend é chata'],'Elas erraram três vezes e acertaram na quarta: persistir valeu a pena (igual no treino!).','m5']
+  ],
+  jaquinho: [
+    ['interpretacao','A comparação "como quem procura tesouro" mostra que o irmão estava…',['muito empenhado em achar sinal','tranquilo','com medo','dormindo'],'Procurar tesouro é procurar com muita vontade. A comparação mostra o empenho dele.','j1'],
+    ['interpretacao','Por que a mãe ligou para a vovó?',['Porque estava sem a receita do vídeo','Porque a vovó estava doente','Para pedir wi-fi','Para convidá-la'],'"Sem a receita do vídeo, ligou para a vovó."','j1'],
+    ['interpretacao','Qual é a ideia principal do texto?',['Sem internet, a família achou outro jeito de se virar e se unir','A internet é inútil','A vovó não sabe cozinhar','O irmão perdeu o celular'],'O texto termina com o bolo pronto e ninguém lembrando do wi-fi: a família se virou junta.','j1'],
+    ['interpretacao','Segundo o texto, por que as abelhas são importantes?',['Ajudam a formar frutos e sementes pela polinização','Só produzem mel','Afastam insetos','Regam as plantas'],'O texto explica que, levando o pólen, elas permitem que se formem frutos e sementes.','j2'],
+    ['interpretacao','No texto, a expressão "Por isso" indica…',['uma consequência','uma comparação','uma dúvida','uma oposição'],'"Por isso" liga a causa (abelhas são importantes) à consequência (a diminuição preocupa).','j2'],
+    ['interpretacao','Qual é o gênero desse texto?',['Texto informativo','Poema','Receita','Conto de fadas'],'Ele explica um fato com informações: é um texto informativo (expositivo).','j2'],
+    ['interpretacao','O texto mostra que o Daniel e o Jaquinho têm jeitos…',['diferentes: um é agitado e o outro é calmo','iguais: os dois são agitados','iguais: os dois são tímidos','diferentes: um é medroso e o outro é bravo'],'O Daniel cantou alto num balde; o Jaquinho, "mais calmo", tocou uma música suave. O contraste é a chave do texto.','j3'],
+    ['interpretacao','Por que as galinhas voltaram?',['Por causa da música suave do violino','Porque o Daniel parou de cantar e deu milho','Porque a avó chamou','Porque começou a chover'],'Logo depois de o Jaquinho tocar, "aos poucos, as galinhas voltaram".','j3'],
+    ['interpretacao','Segundo o texto, como são o papai e a mamãe?',['O papai é sério e a mamãe é brincalhona','Os dois são sérios','Os dois são brincalhões','O papai é brincalhão e a mamãe é séria'],'A primeira frase já diz: "o papai é o sério e a mamãe é a brincalhona".','j4'],
+    ['interpretacao','Por que o Jaquinho "fingiu que estava bravo"?',['Porque estava gostando da brincadeira, mas não queria mostrar','Porque perdeu o violino','Porque o papai brigou com a mamãe','Porque chegou atrasado'],'Ele "fingiu", ou seja, não estava bravo de verdade. "No fim estava rindo" confirma.','j4'],
+    ['interpretacao','"Tinha o dom de acalmar até bicho assustado" quer dizer que o Jaquinho…',['tem um talento especial para acalmar','é veterinário','tem medo de bichos','fala com os animais'],'"Dom" é um talento natural. A avó elogiou o jeito calmo do neto.','j3'],
+    ['classes','Em "Ele correu rapidamente", a palavra "rapidamente" é um…',['advérbio','adjetivo','substantivo','verbo'],'Advérbio modifica o verbo, dizendo como, quando ou onde. Muitos terminam em "-mente".'],
+    ['classes','Em "Os alunos estudiosos passaram", a palavra "estudiosos" é um…',['adjetivo','advérbio','verbo','artigo'],'"Estudiosos" diz como são os alunos: adjetivo.'],
+    ['classes','Qual destas palavras é um pronome?',['nós','casa','bonito','ontem'],'Pronome substitui o nome: eu, tu, ele, nós, vós, eles.'],
+    ['classes','Em "Comprei um livro", a palavra "um" é…',['artigo indefinido','artigo definido','numeral ordinal','pronome pessoal'],'"Um" apresenta algo de forma geral: artigo indefinido. "O livro" seria definido.'],
+    ['classes','Em "Saí cedo, mas cheguei atrasado", a palavra "mas" é uma…',['conjunção','preposição','interjeição','pronome'],'"Mas" liga duas ideias opostas: é uma conjunção.'],
+    ['ortografia','Complete: "___ você faltou à aula?"',['Por que','Porque','Porquê','Por quê'],'Pergunta no começo da frase: "por que", separado e sem acento.'],
+    ['ortografia','Complete: "Faltei ___ estava doente."',['porque','por que','porquê','por quê'],'Explicação, resposta: "porque", junto e sem acento.'],
+    ['ortografia','Complete: "Queria ir, ___ choveu."',['mas','mais','más','mais que'],'"Mas" dá ideia de oposição (porém). "Mais" é o contrário de menos.'],
+    ['ortografia','Complete: "___ dois anos moro aqui."',['Há','A','À','Ah'],'Tempo que já passou se escreve com "há" (do verbo haver).'],
+    ['ortografia','Qual palavra está escrita do jeito certo?',['exceção','excessão','eceção','esceção'],'Exceção: com "xc" e "ç". Pense em "exceto".'],
+    ['acentuacao','Qual palavra está acentuada do jeito certo?',['lâmpada','lampâda','lampada','lãmpada'],'Lâmpada é proparoxítona (a sílaba forte é a antepenúltima): leva acento.'],
+    ['acentuacao','Toda palavra proparoxítona é…',['acentuada','sem acento','oxítona','monossílaba'],'Regra de ouro: todas as proparoxítonas levam acento (árvore, música, pássaro).'],
+    ['acentuacao','Qual destas palavras é oxítona (sílaba forte é a última)?',['café','mesa','lâmpada','árvore'],'Ca-FÉ: a sílaba forte é a última, então é oxítona.'],
+    ['acentuacao','Qual palavra está escrita do jeito certo?',['você','voce','vocé','vôce'],'Você é oxítona terminada em "e": leva acento circunflexo.'],
+    ['concordancia','Complete: "Os meninos ___ cedo."',['chegaram','chegou','chegamos','chega'],'Sujeito no plural (os meninos) pede verbo no plural (chegaram).'],
+    ['concordancia','Qual frase está correta?',['Faltam dois dias para as férias.','Falta dois dias para as férias.','Faltou dois dias para as férias.','Falto dois dias para as férias.'],'O que falta? Dois dias (plural). Então: faltam.'],
+    ['concordancia','Complete: "As camisas ___ estão no varal."',['limpas','limpa','limpos','limpo'],'Camisas é feminino plural, então o adjetivo também: limpas.'],
+    ['concordancia','Complete: "Eu e meu irmão ___ futebol."',['jogamos','joga','jogam','jogo'],'Eu + meu irmão = nós. Nós jogamos.'],
+    ['sentido','"Ele é um leão no jogo." O que a frase quer dizer?',['Que ele é muito forte e corajoso no jogo','Que ele é um animal','Que ele ruge','Que ele tem juba'],'É uma metáfora: compara a pessoa ao leão sem usar "como".'],
+    ['sentido','"Estou morrendo de fome" é um exemplo de…',['exagero (hipérbole)','comparação','rima','pergunta'],'Ninguém está morrendo de verdade: é um exagero para dar força, a hipérbole.'],
+    ['sentido','"Ela é rápida como um raio" usa…',['comparação','metáfora sem "como"','onomatopeia','rima'],'Quando aparece "como", é comparação.'],
+    ['sentido','"O vento sussurrava na janela." Dar ao vento uma ação humana é…',['personificação','hipérbole','comparação','pontuação'],'Sussurrar é coisa de gente. Dar ação humana a coisas é personificação.'],
+    ['pontuacao','Em qual frase a vírgula está correta?',['Maria, venha cá!','Maria venha, cá!','Maria venha cá,!','Ma,ria venha cá!'],'Quando chamamos alguém (vocativo), separamos o nome com vírgula.'],
+    ['pontuacao','Qual frase está pontuada corretamente?',['Comprei arroz, feijão e ovos.','Comprei, arroz feijão e ovos.','Comprei arroz feijão, e ovos.','Comprei arroz, feijão, e, ovos.'],'Vírgula separa os itens da lista. Não se separa o verbo do que vem depois dele.'],
+    ['pontuacao','O ponto de exclamação indica…',['emoção','pergunta','lista','fim de diálogo'],'Exclamação = emoção: surpresa, alegria, susto.'],
+    ['pontuacao','Em "Ontem, choveu muito", a vírgula separa…',['uma expressão de tempo no início da frase','o sujeito do verbo','uma pergunta','um vocativo'],'Quando a frase começa com uma ideia de tempo ou lugar, a vírgula pode separá-la.'],
+    ['verbos','Em "Amanhã nós viajaremos", o verbo está no…',['futuro','passado','presente','imperativo'],'Amanhã + "viajaremos": ação que ainda vai acontecer, futuro.'],
+    ['verbos','Qual é o passado de "eu faço"?',['eu fiz','eu fazi','eu farei','eu faria'],'Fazer é irregular: eu fiz, tu fizeste, ele fez.'],
+    ['verbos','Em "Feche a porta, por favor", o verbo está no modo…',['imperativo','indicativo','subjuntivo','infinitivo'],'Pedido ou ordem: modo imperativo.'],
+    ['verbos','Qual verbo está no infinitivo?',['estudar','estudou','estudamos','estude'],'Infinitivo é o "nome" do verbo, terminado em -ar, -er ou -ir.'],
+    ['interpretacao','"A mamãe quer abraçar o mundo" significa que ela…',['quer fazer e cuidar de muitas coisas ao mesmo tempo','quer viajar pelo mundo','gosta de abraços','quer comprar um globo'],'É linguagem figurada: "abraçar o mundo" é querer dar conta de tudo.','j5'],
+    ['interpretacao','Procurar o celular que está na própria mão é um exemplo de alguém…',['avoado, distraído com muitas coisas','muito organizado','com raiva','com sono'],'O texto liga esse momento a fazer "tanta coisa ao mesmo tempo": é distração, não falta de cuidado.','j5'],
+    ['interpretacao','Qual é o tom do final do texto?',['Carinhoso: apesar da correria, sobra um abraço para cada filho','Triste: nada ficou pronto','Bravo: a mamãe brigou','Neutro: só lista tarefas'],'"Ainda sobra um abraço para cada filho" fecha o texto com carinho.','j5']
+  ]
+};
+
+/* ================= lições (Para estudar) ================= */
+const LICOES = {
+  maia: {
+    valor_posicional:['Cada casa tem um valor (igual cada tecla do órgão tem sua nota)','Num número, o lugar do algarismo muda tudo! No 352, o 3 não vale 3: vale 300, porque mora na casa das centenas.','4.726 = 4.000 + 700 + 20 + 6','Leia o número da direita para a esquerda: unidade, dezena, centena, milhar.'],
+    adicao:['O famoso "vai um"','Somamos coluna por coluna, começando pela direita. Se a coluna passar de 9, escreve o último número e o "1" sobe para a próxima coluna.','  478 + 365: 8+5=13 → escreve 3, vai 1. 7+6+1=14 → escreve 4, vai 1. 4+3+1=8 → 843.','Arme a conta com os números bem alinhados, um embaixo do outro.'],
+    subtracao:['Pedindo emprestado','Se o número de cima é menor, ele pede 1 emprestado para o vizinho da esquerda, e vira 10 a mais.','52 − 17: 2 é menor que 7, pede emprestado: 12 − 7 = 5. O 5 virou 4: 4 − 1 = 3. Resultado: 35.','Erro clássico: trocar a ordem e fazer 7 − 2. Não pode!'],
+    multiplicacao:['Somas que correm','Multiplicar é um atalho para somar números iguais. 4 × 6 é 6 + 6 + 6 + 6 = 24.','4 caixinhas com 6 brigadeiros = 6 + 6 + 6 + 6 = 24 brigadeiros. Tabuada do 9 com truque: 9 × 7 → 10 × 7 = 70, tira 7 = 63.','A ordem não muda o resultado: 3 × 8 = 8 × 3.'],
+    divisao:['Repartindo igualzinho','Dividir é repartir em partes iguais. 20 ÷ 4 pergunta: "4 vezes quanto dá 20?" Resposta: 5.','Confira sempre: 4 × 5 = 20. Se bateu, está certo!','A divisão é a tabuada ao contrário.'],
+    fracoes:['A pizza da matemática','Fração é um pedaço do todo. Metade é dividir em 2, um terço em 3, um quarto em 4.','Uma pizza de 8 pedaços: metade é 4 pedaços. Se a Maya come um quarto, come 8 ÷ 4 = 2 pedaços (e o papai quer o resto).','Quanto maior o número de baixo, menor o pedaço: 1/8 é menor que 1/2.'],
+    dinheiro:['Troco sem susto','Troco é o que sobra: o que você pagou menos o que custou. Trabalhe com os centavos como se fossem números normais.','Pagou R$ 10,00 num batom de R$ 6,50: 10,00 − 6,50 = R$ 3,50. Sobra para um esmalte?','Dica: complete até o próximo real. De 6,50 para 7,00 faltam 0,50; de 7 para 10, faltam 3. Total 3,50.'],
+    tempo:['O relógio maluco','Uma hora tem 60 minutos, não 100! Quando os minutos passam de 60, vira mais uma hora.','A aula de órgão começa 14h40 e dura 30 min: 14h70?? Não! 70 min = 1h10 → 15h10.','Some os minutos primeiro e veja se passou de 60.'],
+    perimetro:['A volta completa','Perímetro é o tamanho da volta inteira, como a cerca de um quintal. Some todos os lados.','Retângulo de 5 m por 3 m: 5 + 3 + 5 + 3 = 16 m.','Não confunda: área é o espaço de dentro (5 × 3 = 15 m²).'],
+    ortografia:['Detetive das letras','Algumas letras parecem iguais no som, mas cada palavra tem seu jeito certo. As pistas ajudam!','Antes de p e b usa m: campo, bombom. Entre vogais, ss faz som de s: pássaro.','Ficou na dúvida? Pense em outra palavra da mesma família: chuva → chuvoso.'],
+    pontuacao:['Os sinais que falam','Os sinais mostram como ler a frase. Ponto final termina, interrogação pergunta, exclamação emociona.','Você vem? (pergunta)  Que legal! (emoção)  Comprei pão, leite e ovo. (lista)','Leia em voz alta: a voz sobe na pergunta e fica forte na exclamação.'],
+    classes:['O time das palavras','Substantivo dá nome (gato, escola). Adjetivo diz como é (preto, alegre). Verbo é ação (correr, dormir).','"O cachorro feliz correu": cachorro = nome, feliz = como é, correu = ação.','Para achar o verbo, pergunte: o que alguém fez?'],
+    sinonimos:['Gêmeos e opostos','Sinônimos são palavras parecidas no sentido (feliz e contente). Antônimos são opostas (alto e baixo).','Rápido → veloz (sinônimo). Rápido → lento (antônimo).','Troque a palavra na frase: se o sentido continua, é sinônimo.'],
+    plural:['De um para muitos','Na maioria das vezes, basta colocar s. Mas algumas palavras têm regras próprias.','flor → flores, animal → animais, pão → pães, lápis → lápis.','Palavras com "al", "el", "ol", "ul" viram "ais", "éis", "óis", "uis".'],
+    interpretacao:['Lendo como detetive','A resposta quase sempre está escondida no texto. Leia a pergunta primeiro e depois procure no texto.','Pergunta: "Quanto tempo?" → procure números e palavras de tempo no texto.','Na pergunta sobre a mensagem, pense: o que o personagem aprendeu?']
+  },
+  jaquinho: {
+    expressoes:['A ordem que derruba muita gente','Expressão tem regra de trânsito: 1º parênteses, 2º potências, 3º × e ÷, 4º + e −. Não é da esquerda para a direita direto!','10 + 2 × 5 = 10 + 10 = 20. O Daniel faria 12 × 5 = 60, e erraria feio.','Sublinhe as multiplicações e divisões antes de começar.'],
+    potencias:['Multiplicação turbinada','Potência é multiplicar a base por ela mesma. O expoente diz quantas vezes ela aparece.','5³ = 5 × 5 × 5 = 125. Pense no violino: 4 cordas, cada uma com 4 notas treinadas = 4² = 16 notas.','Qualquer número elevado a 1 é ele mesmo; elevado a 0 é 1.'],
+    mmc_mdc:['Encontros e divisões','MMC: quando algo se repete e você quer saber quando coincide (ônibus, alarmes). MDC: quando quer dividir em grupos iguais, os maiores possíveis.','Você e o Daniel dão voltas no pasto do sítio: você a cada 4 min, ele a cada 6. Múltiplos de 4 → 4, 8, 12; de 6 → 6, 12. Vocês se encontram na largada em 12 min (MMC). MDC de 12 e 18 = 6.','Problema de "juntos de novo" = MMC. Problema de "dividir sem sobrar" = MDC.'],
+    fracoes_soma:['Iguale antes de somar','Para somar frações, os números de baixo (denominadores) precisam ser iguais. Nunca some os de baixo!','1/2 + 1/3 → 3/6 + 2/6 = 5/6.','Use o MMC dos denominadores para encontrar o número comum.'],
+    fracao_quantidade:['Divide e multiplica','Para achar uma fração de um número: divide pelo de baixo e multiplica pelo de cima.','3/4 de 40: 40 ÷ 4 = 10; 10 × 3 = 30.','Faça a divisão primeiro: as contas ficam menores.'],
+    decimais:['Vírgula embaixo de vírgula','Na soma e na subtração de decimais, alinhe as vírgulas e complete com zeros.','2,5 + 1,25 → 2,50 + 1,25 = 3,75.','Erro comum: alinhar pela direita como se fossem números inteiros.'],
+    porcentagem:['Por cento é por cem','30% quer dizer 30 de cada 100. Para calcular, multiplique pelo número e divida por 100.','Um estojo de violino de R$ 150 com 20% de desconto: 150 × 20 ÷ 100 = 30 de desconto, então paga 120. Atalhos: 10% é dividir por 10; 50% é a metade; 25% é dividir por 4.','Desconto: calcule a porcentagem e tire do preço.'],
+    area:['O espaço de dentro','Área mede a superfície. Retângulo: base × altura. Triângulo: base × altura ÷ 2.','Retângulo 8 × 5 = 40 cm². Triângulo de base 8 e altura 5 = 20 cm².','Área tem unidade ao quadrado (cm², m²). Perímetro é só a volta.'],
+    divisibilidade:['Os truques dos divisores','Dá para saber se um número é divisível sem fazer a conta!','Por 2: termina em par. Por 3: soma dos algarismos é múltiplo de 3 (231 → 2+3+1 = 6 ✔). Por 5: termina em 0 ou 5. Por 9: soma múltipla de 9.','Esses truques economizam tempo na prova.'],
+    interpretacao:['Lendo nas entrelinhas','Algumas respostas estão escritas no texto; outras você precisa deduzir. Procure as pistas.','"Por isso" = consequência. "Mas" = oposição. Comparações com "como" mostram características.','Leia a pergunta antes do texto e marque as palavras-chave.'],
+    classes:['Quem é quem na frase','Substantivo (nome), adjetivo (característica), verbo (ação), advérbio (como, quando, onde), pronome (substitui o nome), conjunção (liga ideias).','"Ela estudou bastante, mas errou": ela = pronome, estudou = verbo, bastante = advérbio, mas = conjunção.','Terminou em "-mente"? Quase sempre é advérbio.'],
+    ortografia:['Os quatro porquês e companhia','Por que (pergunta), porque (resposta), por quê (pergunta no fim), porquê (o motivo, com artigo). Mas = porém; mais = quantidade. Há = tempo passado.','Por que você saiu? Saí porque choveu. Você saiu por quê? Não sei o porquê.','Troque por "porém": se couber, é "mas".'],
+    acentuacao:['A sílaba mais forte','Ache a sílaba forte. Última: oxítona (café). Penúltima: paroxítona (mesa). Antepenúltima: proparoxítona (lâmpada), e essas sempre têm acento.','Oxítonas terminadas em a, e, o (com ou sem s) levam acento: sofá, você, avô.','Fale a palavra devagar, como se chamasse alguém de longe.'],
+    concordancia:['Combinando as palavras','O verbo concorda com o sujeito, e o adjetivo concorda com o substantivo.','Os alunos chegaram. As camisas limpas. Faltam três dias.','Pergunte "quem?" ou "o quê?" para achar o sujeito antes de escolher o verbo.'],
+    sentido:['Quando a frase não é literal','Comparação usa "como". Metáfora compara sem "como". Hipérbole exagera. Personificação dá ações humanas às coisas.','"O Daniel é rápido como um raio" (comparação), "o Daniel é um furacão" (metáfora), "comi mil pastéis" (hipérbole), "o violino chorou" (personificação).','Pergunte: isso é de verdade ou é jeito de falar?'],
+    pontuacao:['A vírgula no lugar certo','A vírgula separa itens de uma lista, o vocativo (quem é chamado) e expressões de tempo e lugar no começo.','Pedro, venha aqui! / Ontem, fui ao cinema. / Levei bola, água e lanche.','Nunca separe o sujeito do verbo com vírgula.'],
+    verbos:['Viagem no tempo','O tempo do verbo mostra quando a ação acontece: passado (estudei), presente (estudo), futuro (estudarei). Imperativo é ordem ou pedido (estude!).','Fazer: eu fiz (passado), eu faço (presente), eu farei (futuro).','Infinitivo é o verbo "pelado", com -ar, -er ou -ir.']
+  }
+};
+
+/* ================= conteúdo completo das lições (Para estudar) ================= */
+const DET = {
+  maia: {
+    valor_posicional:{p:['Escreva o número numa tabelinha de casas: UM (unidade de milhar) · C (centena) · D (dezena) · U (unidade).','Veja em que casa o algarismo mora.','O valor é o algarismo vezes o valor da casa: U = 1, D = 10, C = 100, UM = 1.000.','Para decompor, some o valor de cada casa.'],
+      e:[['No número 3.582, quanto vale o 5?','O 5 está na casa das centenas. Vale 5 × 100 = 500.'],['Decomponha 2.047.','2.000 + 0 + 40 + 7. O zero não vale nada, mas guarda o lugar das centenas!']],
+      x:['Dizer só "5" quando a pergunta é quanto o 5 VALE (são 500).','Esquecer o zero que guarda lugar: 2.047 não é 247.'],
+      d:'No número 6.931, quanto vale o 9?'},
+    adicao:{p:['Arme a conta com unidade embaixo de unidade, dezena embaixo de dezena.','Some da direita para a esquerda.','Se uma coluna passar de 9, escreva só o último número e o "1" sobe para a coluna da esquerda.','Confira arredondando: o resultado tem que ficar perto.'],
+      e:[['367 + 258','7 + 8 = 15 → escreve 5, vai 1. 6 + 5 + 1 = 12 → escreve 2, vai 1. 3 + 2 + 1 = 6. Resultado: 625. Conferindo: 370 + 260 = 630, bem pertinho.'],['A Maya tinha 145 adesivos e ganhou 78. Quantos ficou?','Alinhe o 78 pela direita, embaixo do 45. 5 + 8 = 13 → 3, vai 1. 4 + 7 + 1 = 12 → 2, vai 1. 1 + 1 = 2. Resultado: 223.']],
+      x:['Esquecer de somar o "vai um" na coluna seguinte.','Alinhar o número menor pela esquerda (o 78 embaixo do 14 em vez do 45).'],
+      d:'486 + 357'},
+    subtracao:{p:['Arme a conta alinhando as casas, o número maior em cima.','Comece pela direita.','Se o número de cima for menor, ele pede 1 emprestado da vizinha da esquerda e ganha 10.','Confira: resposta + o que você tirou = o número de cima.'],
+      e:[['532 − 175','2 é menor que 5: pede emprestado → 12 − 5 = 7. O 3 virou 2, que é menor que 7: pede de novo → 12 − 7 = 5. O 5 virou 4: 4 − 1 = 3. Resultado: 357. Conferindo: 357 + 175 = 532 ✔'],['400 − 128','Com zeros, o empréstimo vem lá da centena: 400 vira 3 centenas, 9 dezenas e 10 unidades. 10 − 8 = 2; 9 − 2 = 7; 3 − 1 = 2. Resultado: 272.']],
+      x:['Fazer "o maior menos o menor" em cada coluna (7 − 2 em vez de 12 − 7).','Esquecer que a vizinha que emprestou ficou com 1 a menos.'],
+      d:'615 − 238'},
+    multiplicacao:{p:['Multiplicar é somar parcelas iguais: 4 × 6 = 6 + 6 + 6 + 6.','A ordem não muda o resultado: 7 × 8 = 8 × 7. Então você só precisa decorar metade da tabuada!','Truques: ×5 é a metade de ×10; ×9 é ×10 menos uma vez o número; ×4 é dobrar duas vezes.','Para 23 × 4: multiplique a unidade (3 × 4 = 12, escreve 2, vai 1), depois a dezena (2 × 4 = 8, mais 1 = 9). Resultado: 92.'],
+      e:[['7 × 8','Truque da sequência: 5, 6, 7, 8 → 56 = 7 × 8.'],['9 × 6','10 × 6 = 60, menos 6 = 54.'],['Cada caixinha tem 6 brigadeiros. Quantos há em 8 caixinhas?','8 × 6 = 48 (rima: "seis vezes oito, quarenta e oito").']],
+      x:['Somar em vez de multiplicar (6 + 8 = 14 em vez de 48).','Esquecer o "vai um" em contas como 23 × 4.'],
+      d:'8 × 7 e 16 × 3'},
+    divisao:{p:['Dividir é repartir em partes iguais.','Pergunte: "o divisor vezes quanto dá o número?". É a tabuada ao contrário.','Se não der exato, o que sobra é o resto, e ele tem que ser menor que o divisor.','Confira: resultado × divisor + resto = número.'],
+      e:[['56 ÷ 7','7 × 8 = 56, então 56 ÷ 7 = 8.'],['29 ÷ 4','4 × 7 = 28, sobra 1. Resultado: 7, resto 1. Conferindo: 7 × 4 + 1 = 29 ✔']],
+      x:['Deixar um resto maior que o divisor (sinal de que cabe mais uma vez).','Subtrair em vez de dividir.'],
+      d:'A mamãe tem 45 rosas para 5 buquês iguais. Quantas em cada?'},
+    fracoes:{p:['O número de baixo (denominador) diz em quantas partes iguais o inteiro foi dividido.','O número de cima (numerador) diz quantas partes você pegou.','Fração de uma quantidade: divide pelo de baixo e multiplica pelo de cima.','Quanto maior o número de baixo, MENOR o pedaço: 1/8 é menor que 1/4.'],
+      e:[['1/4 de 20','20 ÷ 4 = 5.'],['3/4 de 20','20 ÷ 4 = 5; 5 × 3 = 15.'],['O que é maior: 1/2 ou 1/3 de uma pizza?','1/2, porque a pizza foi cortada em menos pedaços, então cada um é maior.']],
+      x:['Achar que 1/8 é maior que 1/4 porque 8 é maior que 4.','Esquecer de multiplicar pelo número de cima.'],
+      d:'2/3 de 12'},
+    dinheiro:{p:['R$ 1,00 = 100 centavos.','Se ajudar, pense tudo em centavos: R$ 6,50 = 650 centavos.','Troco = valor pago − preço. Alinhe a vírgula embaixo da vírgula.','Truque de completar: do preço vá subindo até o valor pago e some os pulos.'],
+      e:[['Um esmalte custa R$ 3,75 e a Maya paga com R$ 5,00. Qual o troco?','Completando: de 3,75 até 4,00 faltam 0,25; de 4,00 até 5,00 falta 1,00. Troco: R$ 1,25.'],['Um pastel de R$ 2,40 e um suco de R$ 1,85, pagando com R$ 10,00.','Total: 2,40 + 1,85 = R$ 4,25. Troco: 10,00 − 4,25 = R$ 5,75.']],
+      x:['Desalinhar a vírgula ao armar a conta.','Esquecer de somar todos os itens antes de calcular o troco.'],
+      d:'Uma tiara de R$ 7,30 paga com nota de R$ 20,00.'},
+    tempo:{p:['1 hora tem 60 minutos (não 100!). Meia hora = 30 min; um quarto de hora = 15 min.','Some os minutos primeiro.','Se passar de 60, tire 60 dos minutos e some 1 na hora.','Para saber quanto tempo durou, complete até a hora cheia e depois siga.'],
+      e:[['9h45 + 30 minutos','45 + 30 = 75 minutos = 1 h 15 min. Então: 10h15.'],['Quanto tempo vai de 14h20 até 15h05?','De 14h20 até 15h00 são 40 min; mais 5 = 45 minutos.']],
+      x:['Escrever 9h75 como se a hora tivesse 100 minutos.','Esquecer de somar 1 na hora quando os minutos passam de 60.'],
+      d:'A aula de órgão começa 16h50 e dura 40 minutos. Que horas termina?'},
+    perimetro:{p:['Perímetro é a medida da volta inteira da figura.','Some todos os lados, até os que não estão escritos (num retângulo, os lados opostos são iguais).','Retângulo: 2 × (comprimento + largura). Quadrado: 4 × lado.','A unidade é só m, cm ou dm, sem o "²".'],
+      e:[['Retângulo de 6 m por 4 m','6 + 4 + 6 + 4 = 20 m.'],['Quadrado de lado 5 cm','4 × 5 = 20 cm.']],
+      x:['Multiplicar os lados (isso é área, não perímetro).','Somar só os dois lados escritos e esquecer os outros dois.'],
+      d:'O tapete da Maya tem 8 dm por 3 dm. Quanto de fita para contornar?'},
+    ortografia:{p:['Antes de P e B, use M: campo, bombom, sempre.','Entre vogais, S tem som de Z (casa, rosa); para som de S, use SS (pássaro, massa).','Ç só aparece antes de A, O e U (maçã, açúcar). Antes de E e I, usa-se C (cereja, cinema).','RR entre vogais faz som forte (carro); um R só faz som fraco (caro).','Na dúvida entre CH e X, lembre de uma palavra da mesma família: chuva → chuvoso.'],
+      e:[['Ca__a (onde a gente mora)','Casa, com um S: entre vogais, faz som de Z.'],['Ma__ã (a fruta)','Maçã, com Ç: antes do A.']],
+      x:['Escrever "çe" ou "çi": não existe!','Escrever "canpo" com N antes do P.'],
+      d:'Complete: bo__ba (que estoura)'},
+    pontuacao:{p:['Ponto final (.) termina uma frase que afirma algo.','Interrogação (?) termina uma pergunta.','Exclamação (!) mostra emoção: alegria, susto, surpresa.','Vírgula (,) separa os itens de uma lista.','Travessão (—) abre a fala de um personagem no diálogo.'],
+      e:[['— Mamãe, vamos gravar uma trend? — perguntou a Maya.','O travessão abre a fala; o ponto de interrogação mostra a pergunta.'],['Comprei batom, esmalte, tiara e laço.','As vírgulas separam os itens; antes do "e" não precisa.']],
+      x:['Escrever uma pergunta sem o ponto de interrogação.','Colocar vírgula antes do "e" no final de uma lista simples.'],
+      d:'Que dia lindo__'},
+    classes:{p:['Substantivo dá nome: pessoa, bicho, coisa, lugar (Maya, gato, escola).','Adjetivo diz como algo é (bonito, preto, alegre).','Verbo é ação ou estado (correr, comer, ficar).','Artigo vem antes do substantivo: o, a, os, as, um, uma.'],
+      e:[['A menina alegre dançou.','A = artigo; menina = substantivo; alegre = adjetivo; dançou = verbo.'],['Truques','Verbo: dá para dizer "eu ___" (eu danço). Substantivo: dá para pôr "o" ou "a" na frente (a menina). Adjetivo: responde "como é?" (como é a menina? alegre).']],
+      x:['Achar que "alegre" é substantivo só porque está perto do nome.','Esquecer que o artigo também é uma classe de palavra.'],
+      d:'"O cachorro bravo latiu." Qual é o adjetivo?'},
+    sinonimos:{p:['Sinônimos têm sentido parecido: feliz e contente.','Antônimos têm sentido contrário: alto e baixo.','Teste: troque a palavra na frase. Se o sentido continua, é sinônimo.','Muitos antônimos nascem com IN- ou DES-: feliz → infeliz, fazer → desfazer.'],
+      e:[['Sinônimo de "rápido"','Veloz. "O carro rápido" = "o carro veloz".'],['Antônimo de "leve"','Pesado.']],
+      x:['Confundir sinônimo com antônimo: lembre que "anti" é contra.','Escolher uma palavra só parecida no som, e não no sentido.'],
+      d:'Antônimo de "cheio" e sinônimo de "contente".'},
+    plural:{p:['A maioria das palavras só ganha S: casa → casas.','Terminou em R, S ou Z? Ganha ES: flor → flores, mês → meses, luz → luzes.','AL, EL, OL, UL viram AIS, ÉIS, ÓIS, UIS: animal → animais, papel → papéis.','M vira NS: homem → homens.','ÃO pode virar ÕES, ÃES ou ÃOS (balão → balões, pão → pães, mão → mãos). E algumas não mudam: o lápis, os lápis.'],
+      e:[['Plural de "anel"','Anéis (EL vira ÉIS).'],['Plural de "limão"','Limões.']],
+      x:['Escrever "animals" ou "pãos".','Colocar S em palavras que não mudam: "lápises" não existe.'],
+      d:'Plural de "jardim" e de "papel".'},
+    interpretacao:{p:['Leia a pergunta antes do texto: assim você já sabe o que procurar.','Leia o texto inteiro, com calma.','Volte e ache o pedaço que responde. A resposta tem que estar no texto, não na sua opinião.','Pergunta de "por quê?": procure as palavras porque, pois, então.','Pergunta sobre a mensagem: pense no que o personagem aprendeu.'],
+      e:[['"A Lia guardou metade do lanche para o irmão menor." O que isso mostra sobre a Lia?','Que ela é generosa: dividiu o que era dela.'],['Pergunta: "Quanto tempo demorou?"','Procure números e palavras de tempo no texto: dias, semanas, horas.']],
+      x:['Responder com o que você acha, e não com o que o texto diz.','Escolher uma alternativa verdadeira na vida real, mas que não aparece no texto.'],
+      d:'"Choveu muito, então o jogo foi adiado." Por que o jogo foi adiado?'}
+  },
+  jaquinho: {
+    expressoes:{p:['Primeiro os parênteses ( ), depois colchetes [ ], depois chaves { }, sempre de dentro para fora.','Depois as potências e raízes.','Depois multiplicações e divisões, NA ORDEM EM QUE APARECEM, da esquerda para a direita.','Por último, somas e subtrações, também da esquerda para a direita.'],
+      e:[['18 − 2 × (3 + 4)','Parênteses: 3 + 4 = 7. Multiplicação: 2 × 7 = 14. Subtração: 18 − 14 = 4.'],['40 ÷ 4 × 2','× e ÷ têm a mesma força: vai da esquerda para a direita. 40 ÷ 4 = 10; 10 × 2 = 20. (E não 40 ÷ 8 = 5!)'],['2³ + 6 ÷ 3','Potência: 2³ = 8. Divisão: 6 ÷ 3 = 2. Soma: 8 + 2 = 10.']],
+      x:['Fazer tudo da esquerda para a direita, ignorando a ordem (o erro "do Daniel").','Achar que × vem sempre antes de ÷: os dois têm a mesma força.'],
+      d:'5 + 3 × 2² − 8 ÷ 4'},
+    potencias:{p:['aⁿ é multiplicar a base a por ela mesma n vezes: 3⁴ = 3 × 3 × 3 × 3.','Qualquer número elevado a 1 é ele mesmo; elevado a 0 é 1 (exceto o zero).','10ⁿ é 1 seguido de n zeros: 10³ = 1.000.','Vale decorar os quadrados até 15² (225) e os cubos 2³ = 8, 3³ = 27, 4³ = 64, 5³ = 125.'],
+      e:[['3⁴','3 × 3 = 9; 9 × 3 = 27; 27 × 3 = 81.'],['7⁰ + 7¹','1 + 7 = 8.']],
+      x:['Fazer base × expoente: 3⁴ não é 12.','Esquecer que todo número (diferente de zero) elevado a 0 dá 1, e não 0.'],
+      d:'2⁵ e 10³'},
+    mmc_mdc:{p:['MMC (menor múltiplo comum): o menor número que é múltiplo dos dois. Use quando algo se repete e você quer saber quando coincide de novo.','MDC (maior divisor comum): o maior número que divide os dois. Use para formar grupos iguais, o maior possível, sem sobrar.','Método rápido: fatore os dois juntos, dividindo por primos (2, 3, 5…).','Para conferir: MMC × MDC = produto dos dois números.'],
+      e:[['MMC de 12 e 18','12, 18 ÷2 → 6, 9 ÷2 → 3, 9 ÷3 → 1, 3 ÷3 → 1, 1. MMC = 2 × 2 × 3 × 3 = 36.'],['MDC de 12 e 18','12 = 2² × 3 e 18 = 2 × 3². Fatores comuns com o menor expoente: 2 × 3 = 6. Conferindo: 36 × 6 = 216 = 12 × 18 ✔']],
+      x:['Trocar um pelo outro: "juntos de novo" é MMC; "dividir em grupos iguais sem sobrar" é MDC.','Achar que o MMC é sempre a multiplicação dos dois números.'],
+      d:'MMC e MDC de 8 e 12.'},
+    fracoes_soma:{p:['Mesmo denominador: some (ou subtraia) só os de cima e mantenha o de baixo.','Denominadores diferentes: encontre o MMC deles.','Transforme cada fração: divida o MMC pelo denominador e multiplique pelo numerador.','Some e simplifique dividindo em cima e embaixo pelo mesmo número.'],
+      e:[['2/3 + 1/4','MMC(3, 4) = 12. 2/3 = 8/12 e 1/4 = 3/12. Soma: 11/12.'],['5/6 − 1/4','MMC(6, 4) = 12. 10/12 − 3/12 = 7/12.'],['Simplificar 6/8','Divida os dois por 2: 3/4.']],
+      x:['Somar os denominadores: 1/2 + 1/3 não é 2/5.','Mudar o de baixo e esquecer de ajustar o de cima.'],
+      d:'1/2 + 1/3 e 3/4 + 1/6'},
+    fracao_quantidade:{p:['Divida a quantidade pelo número de baixo.','Multiplique o resultado pelo número de cima.','Problema ao contrário ("2/3 de um número é 18"): divida pelo de cima e multiplique pelo de baixo.','Confira se o resultado faz sentido: 3/4 de algo tem que ser menos que o todo.'],
+      e:[['3/5 de 40','40 ÷ 5 = 8; 8 × 3 = 24.'],['2/3 de um número é 18. Que número é esse?','18 ÷ 2 = 9 (isso é 1/3); 9 × 3 = 27.']],
+      x:['Multiplicar pelo de baixo e dividir pelo de cima.','Parar no primeiro passo (dar 8 como resposta para 3/5 de 40).'],
+      d:'5/8 de 64'},
+    decimais:{p:['Somar ou subtrair: vírgula embaixo de vírgula; complete com zeros.','Multiplicar: faça a conta sem as vírgulas e depois conte as casas decimais dos dois números.','×10, ×100, ×1.000: a vírgula anda 1, 2 ou 3 casas para a direita.','Para comparar, iguale as casas: 0,7 = 0,70, que é maior que 0,65.'],
+      e:[['4,5 + 2,35','4,50 + 2,35 = 6,85.'],['12 − 3,7','12,0 − 3,7 = 8,3.'],['1,2 × 0,3','12 × 3 = 36. São 2 casas decimais no total: 0,36.']],
+      x:['Alinhar pela direita como se fossem inteiros.','Achar que 0,65 é maior que 0,7 só porque 65 é maior que 7.'],
+      d:'7,2 + 0,85 e qual é maior: 0,7 ou 0,65?'},
+    porcentagem:{p:['% quer dizer "por cem": 30% = 30/100.','Atalhos: 10% é dividir por 10; 50% é a metade; 25% é dividir por 4; 5% é a metade de 10%.','Monte por partes: 15% = 10% + 5%.','Desconto: calcule a porcentagem e tire do preço. Aumento: calcule e some.'],
+      e:[['15% de 200','10% = 20 e 5% = 10. Total: 30.'],['Estojo de violino de R$ 80 com 20% de desconto.','20% de 80 = 16. Preço final: 80 − 16 = R$ 64.'],['Aumento de 10% em R$ 150.','10% = 15. Novo preço: R$ 165.']],
+      x:['Tirar o número da porcentagem direto do preço (80 − 20 = 60 está errado).','Calcular o desconto e esquecer de tirar do preço.'],
+      d:'35% de 60'},
+    area:{p:['Área é o tamanho da superfície (o espaço de dentro). A unidade leva ²: cm², m².','Retângulo: base × altura. Quadrado: lado × lado.','Triângulo: base × altura ÷ 2 (ele é metade de um retângulo).','Figura composta: divida em pedaços conhecidos e some as áreas.'],
+      e:[['O terreno do sítio tem 12 m por 8 m.','12 × 8 = 96 m².'],['Triângulo de base 10 cm e altura 6 cm.','10 × 6 ÷ 2 = 30 cm².']],
+      x:['Confundir com perímetro (que é a volta).','Esquecer o ÷ 2 no triângulo.'],
+      d:'Quadrado de lado 9 cm e triângulo de base 14 cm e altura 5 cm.'},
+    divisibilidade:{p:['Por 2: termina em número par.','Por 3: a soma dos algarismos é múltiplo de 3. Por 9: a soma é múltiplo de 9.','Por 4: os dois últimos algarismos formam um múltiplo de 4.','Por 5: termina em 0 ou 5. Por 10: termina em 0. Por 6: divisível por 2 e por 3 ao mesmo tempo.'],
+      e:[['1.236','Par → divisível por 2. Soma 1+2+3+6 = 12 → por 3. Os dois últimos, 36 → por 4. Por 2 e por 3 → por 6.'],['2.415','Soma 12 → por 3. Termina em 5 → por 5. É ímpar → não é por 2.']],
+      x:['Na regra do 3, olhar só o último algarismo em vez de somar todos.','Achar que todo número terminado em 4 é divisível por 4 (14 não é).'],
+      d:'1.350 é divisível por 2, 3, 5, 9 e 10?'},
+    interpretacao:{p:['Leia a pergunta antes do texto e marque as palavras-chave.','Identifique o tipo: localizar uma informação, deduzir, ideia principal, sentido de uma expressão ou gênero do texto.','Conectivos dão pistas: "mas" = oposição; "por isso" = consequência; "porque" = causa; "embora" = concessão.','Elimine alternativas exageradas (sempre, nunca, todos) e as que são verdadeiras mas não estão no texto.'],
+      e:[['"Embora estivesse cansado, Jaquinho terminou o treino de violino."','"Embora" mostra que o cansaço não impediu: ele foi persistente.'],['Ideia principal','Pergunte: se eu tivesse que resumir o texto numa frase, qual seria?']],
+      x:['Escolher a alternativa com sua opinião, e não com o que o texto diz.','Ler só o começo do texto e responder.'],
+      d:'"Treinou todos os dias; por isso, tocou sem errar." Que relação o "por isso" indica?'},
+    classes:{p:['São 10 classes: substantivo, artigo, adjetivo, numeral, pronome, verbo, advérbio, preposição, conjunção e interjeição.','Advérbio modifica verbo, adjetivo ou outro advérbio: muito, bem, ontem, aqui, rapidamente.','Preposição liga palavras: de, em, para, com, por, sem.','Conjunção liga orações: e, mas, porque, quando, embora.'],
+      e:[['"Ontem, o violinista tocou muito bem, mas ninguém aplaudiu."','ontem = advérbio (tempo); o = artigo; violinista = substantivo; tocou = verbo; muito e bem = advérbios; mas = conjunção; ninguém = pronome; aplaudiu = verbo.']],
+      x:['Achar que toda palavra terminada em -mente é adjetivo (é advérbio).','Confundir preposição (liga palavras) com conjunção (liga orações).'],
+      d:'Em "Ele chegou cedo", que classe é "cedo"?'},
+    ortografia:{p:['Por que (pergunta), porque (resposta), por quê (pergunta no fim), porquê (substantivo: o motivo).','Mas = porém. Mais = quantidade.','Há = tempo passado (há dois anos). A = tempo futuro ou distância (daqui a dois dias, a 5 km).','Mal é o oposto de bem; mau é o oposto de bom.'],
+      e:[['"___ você chegou tarde? Cheguei ___ o ônibus atrasou."','Por que (pergunta) / porque (resposta).'],['"O time jogou ___ hoje."','Mal: o oposto seria "jogou bem".']],
+      x:['Usar "a" para tempo que já passou: "a dois anos" está errado; é "há dois anos".','Trocar mal por mau: "mau humor" (bom humor) e "passou mal" (passou bem).'],
+      d:'Complete: "Queria ir, ___ choveu" e "Comi ___ um pedaço".'},
+    acentuacao:{p:['Ache a sílaba mais forte da palavra.','Proparoxítonas (forte na antepenúltima): TODAS têm acento. Ex.: música, lâmpada.','Oxítonas (forte na última): acento se terminam em a(s), e(s), o(s), em(ens). Ex.: sofá, você, avô, também.','Paroxítonas (forte na penúltima): acento se terminam em l, n, r, x, ps, ã(s), ão(s), i(s), us, um(uns) ou ditongo. Ex.: fácil, açúcar, lápis, história.'],
+      e:[['café, você, avô','Oxítonas terminadas em e e o: levam acento.'],['fácil, açúcar','Paroxítonas terminadas em l e r: levam acento.']],
+      x:['Acentuar paroxítona terminada em a, e, o (mesa, livro e porta não têm acento).','Esquecer o acento das proparoxítonas.'],
+      d:'Qual está certa: "util" ou "útil"?'},
+    concordancia:{p:['O verbo concorda com o sujeito em número e pessoa: os meninos chegaram.','Sujeito composto (dois ou mais núcleos) pede verbo no plural: Jaquinho e Daniel correram.','O adjetivo concorda com o substantivo em gênero e número: camisas limpas.','"Haver" no sentido de existir fica no singular: havia muitas pessoas.'],
+      e:[['"Faltam três dias para as férias."','O que falta? Três dias (plural), então: faltam.'],['"Eu e meu primo ___ no sítio."','Eu + meu primo = nós: brincamos.']],
+      x:['Escrever "haviam muitas pessoas" (o certo é "havia").','Deixar o verbo no singular quando o sujeito está depois dele: "chegou os convidados" (o certo é "chegaram").'],
+      d:'"___ muitos alunos na sala." Havia ou haviam?'},
+    sentido:{p:['Denotativo = sentido literal, de dicionário. Conotativo = sentido figurado.','Comparação usa "como": rápido como um raio. Metáfora compara sem "como": ele é uma fera.','Hipérbole exagera: chorei rios. Personificação dá ação humana a coisas: o vento sussurrou.','Onomatopeia imita sons (tic-tac). Ironia diz o contrário do que quer dizer ("que belo trabalho!", quando ficou ruim).'],
+      e:[['"O Daniel é um furacão."','Metáfora: compara o Daniel a um furacão sem usar "como". Quer dizer que ele é agitado.'],['"Já te falei mil vezes!"','Hipérbole: um exagero para dar ênfase.']],
+      x:['Confundir comparação (tem "como") com metáfora (sem "como").','Ler o sentido figurado como literal.'],
+      d:'"O violino chorou na apresentação." Que figura é essa?'},
+    pontuacao:{p:['Vírgula separa itens de lista, o vocativo (quem é chamado) e o aposto (explicação: "Jaquinho, o violinista, chegou").','Vírgula separa expressões de tempo e lugar deslocadas para o começo: "Ontem, fomos ao sítio."','NUNCA separe com vírgula o sujeito do verbo, nem o verbo do complemento.','Dois-pontos anunciam lista ou explicação; travessão ou aspas marcam fala.'],
+      e:[['"Daniel meu primo adora o sítio."','Corrigido: "Daniel, meu primo, adora o sítio." (aposto entre vírgulas)'],['"Jaquinho venha jantar!"','Corrigido: "Jaquinho, venha jantar!" (vocativo)']],
+      x:['Escrever "O Jaquinho, toca violino." (vírgula entre sujeito e verbo).','Esquecer as duas vírgulas do aposto (abrir e fechar).'],
+      d:'Pontue: "Mamãe a brincalhona da casa inventou uma música"'},
+    verbos:{p:['Indicativo (certeza): presente (faço), pretérito perfeito (fiz), pretérito imperfeito (fazia), futuro (farei), futuro do pretérito (faria).','Subjuntivo (dúvida ou desejo): que eu faça, se eu fizesse, quando eu fizer.','Imperativo: ordem ou pedido (faça!).','Irregulares que mais caem: fazer → fiz; ter → tive; ir e ser → fui; pôr → pus; trazer → trouxe; ver → vi; vir → vim.'],
+      e:[['"Ontem eu ___ a lição" (fazer)','Fiz (pretérito perfeito).'],['"Se eu ___ tempo, tocaria mais" (ter)','Tivesse (subjuntivo).']],
+      x:['Inventar formas regulares: "fazi", "trazi", "fazerei".','Confundir "fui" de ir com "fui" de ser: as duas existem e se escrevem igual.'],
+      d:'Passado de "eu trago" e de "eu ponho".'}
+  }
+};
+
+/* ================= banco extra de Português (v10) — SEMPRE acrescentar no FIM de cada lista (o id é a posição) ================= */
+Object.assign(TX,{
+  m6:'O James acordou de madrugada e foi direto para a cama do papai e da mamãe. Pediu mamadeira e só tomou segurando no braço da Maya, que tinha acordado também. No outro dia, a Maya bocejava na escola, mas sorria: o irmãozinho tinha dormido abraçado nela.',
+  m7:'Para a apresentação de órgão, a Maya treinou a mesma música todos os dias. No começo, errava sempre a mesma parte. Ela tocou aquela parte devagar, várias vezes, até ficar fácil. No dia da apresentação, tocou do começo ao fim sem errar e todo mundo aplaudiu de pé.',
+  j6:'O Daniel jurou que conseguia atravessar o lago do sítio pulando de pedra em pedra. Na terceira pedra, escorregou e caiu na água rasa. Saiu ensopado, rindo mais alto que todo mundo. O Jaquinho, que tinha observado as pedras antes, atravessou pelo caminho mais longo, seco e tranquilo. — Você é muito chato — disse o Daniel. — E você está molhado — respondeu o Jaquinho.',
+  j7:'O violino tem quatro cordas, afinadas em sol, ré, lá e mi. O som nasce quando o arco, feito com crina de cavalo, faz as cordas vibrarem. A caixa de madeira funciona como um amplificador natural: ela deixa o som mais forte. Por isso, a madeira escolhida e o formato da caixa mudam bastante o timbre do instrumento.'
+});
+const PTX = {
+  maia: {
+    ortografia:[
+      ['Qual palavra está escrita do jeito certo?',['bombom','bonbom','bonbon','bombon'],'Antes de B usamos M: bombom.'],
+      ['Complete: a __ícara de chá.',['x','ch','s','sh'],'Xícara se escreve com X.'],
+      ['Complete: o pe__e nadou no aquário.',['ix','ch','s','ss'],'Depois de EI, usamos X: peixe, feixe.'],
+      ['Complete: o a__úcar é doce.',['ç','ss','s','c'],'Açúcar: Ç antes do U.'],
+      ['Complete: a ca__a da Maya.',['s','ss','z','ç'],'Casa: um S entre vogais tem som de Z.'],
+      ['Qual palavra está escrita do jeito certo?',['tempestade','tenpestade','tempestadi','tempestad'],'Antes de P usamos M: tempestade.'],
+      ['Complete: a profe__ora explicou a lição.',['ss','s','ç','c'],'Professora: SS faz som de S entre vogais.'],
+      ['Complete: o ca__o da mamãe é vermelho.',['rr','r','h','l'],'Carro: RR entre vogais faz o som forte. "Caro" (com um R) é o que custa muito.'],
+      ['Qual palavra está escrita do jeito certo?',['cereja','çereja','sereja','cerreja'],'Antes de E usamos C, nunca Ç.'],
+      ['Complete: o __uveiro estava quente.',['ch','x','s','sh'],'Chuveiro é da família de chuva: CH.']],
+    pontuacao:[
+      ['Qual frase está pontuada certo?',['Você gosta de brigadeiro?','Você gosta de brigadeiro.','Você gosta, de brigadeiro?','Você, gosta de brigadeiro'],'É uma pergunta: termina com ponto de interrogação.'],
+      ['Que sinal falta? "Oba__ Vamos para o sítio!"',['!','?',',','.'],'"Oba" mostra alegria: ponto de exclamação.'],
+      ['Onde vão as vírgulas? "Comprei laço tiara e batom."',['Comprei laço, tiara e batom.','Comprei, laço tiara e batom.','Comprei laço tiara, e batom.','Comprei laço tiara e, batom.'],'A vírgula separa os itens da lista. Antes do "e" não precisa.'],
+      ['O que o ponto final indica?',['Que a frase terminou','Uma pergunta','Uma emoção forte','Que alguém vai falar'],'O ponto final fecha uma frase que conta ou afirma algo.'],
+      ['Que sinal mostra surpresa? "Nossa__ Que vestido lindo!"',['!','.','?',','],'Surpresa é emoção: ponto de exclamação.'],
+      ['Em "— Vamos gravar um reels? — perguntou a mamãe.", para que serve o primeiro travessão?',['Para mostrar que a mamãe começou a falar','Para separar uma lista','Para terminar a frase','Para fazer uma conta'],'O travessão abre a fala do personagem.'],
+      ['Qual frase precisa de ponto de interrogação?',['Quantas rosas tem o buquê','A loja abriu cedo','Que lindo laço','O James dormiu'],'"Quantas…" é uma pergunta.'],
+      ['Qual frase está pontuada certo?',['O James comeu, dormiu e acordou.','O James, comeu dormiu e acordou.','O James comeu dormiu, e acordou.','O James comeu dormiu e, acordou.'],'Vírgula entre as ações da lista; nada antes do "e".'],
+      ['A Maya só está contando uma informação: "Hoje é sábado__"',['.','?','!',','],'Quando só informa, usa ponto final.'],
+      ['Para que servem os dois-pontos em "Levei três coisas: batom, laço e tiara."?',['Para anunciar a lista que vem depois','Para fazer uma pergunta','Para mostrar emoção','Para terminar a frase'],'Os dois-pontos avisam que vem uma lista ou explicação.']],
+    classes:[
+      ['Em "A Maya comeu pastel", qual palavra é o verbo?',['comeu','Maya','pastel','A'],'Comeu é a ação.'],
+      ['Qual destas palavras é um adjetivo?',['cheiroso','flor','correr','ontem'],'Cheiroso diz como algo é.'],
+      ['Qual destas palavras é um substantivo?',['órgão','cantar','alto','bem'],'Órgão é o nome de um instrumento.'],
+      ['Em "O James sapeca acordou", qual palavra diz como o James é?',['sapeca','James','acordou','O'],'Sapeca é adjetivo.'],
+      ['Qual destas palavras é um artigo?',['uma','casa','bonita','pular'],'Artigos: o, a, os, as, um, uma.'],
+      ['Em "As flores amarelas murcharam", qual palavra é substantivo?',['flores','amarelas','murcharam','As'],'Flores é o nome; amarelas é adjetivo; murcharam é verbo.'],
+      ['Qual palavra indica uma ação?',['dançar','sofá','lindo','azul'],'Dançar é verbo.'],
+      ['Em "A mamãe gravou um vídeo engraçado", qual é o adjetivo?',['engraçado','vídeo','gravou','mamãe'],'Engraçado diz como é o vídeo.'],
+      ['Qual palavra é nome próprio (substantivo próprio)?',['Maya','menina','bonita','correu'],'Nome próprio começa com letra maiúscula.'],
+      ['Em "O cachorro latiu alto", qual palavra é o substantivo?',['cachorro','latiu','alto','O'],'Cachorro é o nome do animal.']],
+    sinonimos:[
+      ['Qual palavra tem o mesmo sentido de "alegre"?',['contente','triste','zangado','cansado'],'Alegre = contente.'],
+      ['Qual é o contrário de "quente"?',['frio','morno','fervendo','grande'],'Quente ↔ frio.'],
+      ['Qual palavra tem o mesmo sentido de "falar"?',['dizer','calar','ouvir','correr'],'Falar = dizer.'],
+      ['Qual é o contrário de "entrar"?',['sair','chegar','pular','abrir'],'Entrar ↔ sair.'],
+      ['Qual palavra tem o mesmo sentido de "enorme"?',['gigante','pequeno','fino','curto'],'Enorme = gigante.'],
+      ['Qual é o contrário de "dia"?',['noite','tarde','manhã','sol'],'Dia ↔ noite.'],
+      ['Qual palavra tem o mesmo sentido de "começar"?',['iniciar','terminar','parar','acabar'],'Começar = iniciar.'],
+      ['Qual é o contrário de "limpo"?',['sujo','lavado','novo','claro'],'Limpo ↔ sujo.'],
+      ['Qual palavra tem o mesmo sentido de "esperto"?',['inteligente','bobo','lento','cansado'],'Esperto = inteligente.'],
+      ['Qual é o contrário de "feliz"?',['infeliz','contente','alegre','animado'],'Com IN- na frente, vira o contrário: infeliz.']],
+    plural:[
+      ['Qual é o plural de "mão"?',['mãos','mães','mões','mãoes'],'Mão → mãos.'],
+      ['Qual é o plural de "balão"?',['balões','balãos','balães','balãoes'],'Balão → balões.'],
+      ['Qual é o plural de "papel"?',['papéis','papels','papeles','papéus'],'EL vira ÉIS: papéis.'],
+      ['Qual é o plural de "luz"?',['luzes','luzs','luzis','luz'],'Terminou em Z, ganha ES: luzes.'],
+      ['Qual é o plural de "homem"?',['homens','homems','homemes','homen'],'M vira NS: homens.'],
+      ['Qual é o plural de "mês"?',['meses','mêss','mêses','mes'],'Mês → meses (perde o acento).'],
+      ['Qual é o plural de "anel"?',['anéis','anels','aneles','anéus'],'EL vira ÉIS: anéis.'],
+      ['Qual é o plural de "ônibus"?',['ônibus','ônibuses','ônibusis','ônibuss'],'Ônibus não muda: um ônibus, dois ônibus.'],
+      ['Qual é o plural de "jardim"?',['jardins','jardims','jardimes','jardines'],'M vira NS: jardins.'],
+      ['Qual é o plural de "cão"?',['cães','cãos','cões','cãoes'],'Cão → cães, igual pão → pães.'],
+      ['Qual é o plural de "lençol"?',['lençóis','lençols','lençoles','lençõis'],'OL vira ÓIS: lençóis.']],
+    interpretacao:[
+      ['Para onde o James foi de madrugada?',['Para a cama do papai e da mamãe','Para a sala','Para a cozinha','Para o quarto do Jaquinho'],'"Foi direto para a cama do papai e da mamãe."','m6'],
+      ['Por que a Maya bocejava na escola?',['Porque acordou de madrugada com o James','Porque estava doente','Porque a aula era chata','Porque correu muito'],'Ela acordou junto com o James de madrugada.','m6'],
+      ['Por que a Maya sorria mesmo cansada?',['Porque o irmãozinho dormiu abraçado nela','Porque ganhou um presente','Porque tirou nota 10','Porque não teve aula'],'A última frase explica o sorriso.','m6'],
+      ['O que a Maya fez com a parte da música em que errava?',['Tocou devagar, várias vezes','Pulou essa parte','Desistiu da música','Pediu para o papai tocar'],'"Tocou aquela parte devagar, várias vezes, até ficar fácil."','m7'],
+      ['Como foi a apresentação?',['Ela tocou sem errar e foi aplaudida','Ela errou tudo','Ela não foi','A apresentação foi cancelada'],'"Tocou do começo ao fim sem errar e todo mundo aplaudiu."','m7'],
+      ['Qual é a lição do texto?',['Treinar a parte difícil devagar ajuda a acertar','Música é fácil','É melhor nunca errar','Só quem nasce sabendo toca bem'],'Ela treinou o ponto fraco até dominar, igual ao reforço da Missão Bolsa.','m7']]
+  },
+  jaquinho: {
+    interpretacao:[
+      ['O que o Jaquinho fez de diferente do Daniel?',['Observou as pedras antes e escolheu o caminho mais seguro','Pulou mais rápido','Desistiu de atravessar','Empurrou o Daniel'],'Ele "tinha observado as pedras antes" e foi pelo caminho mais longo.','j6'],
+      ['A resposta "E você está molhado" tem um tom de…',['ironia bem-humorada','raiva','tristeza','medo'],'Ele responde à provocação com humor, lembrando o tombo.','j6'],
+      ['Que contraste o texto mostra?',['Impulso (Daniel) x planejamento (Jaquinho)','Coragem x medo','Riqueza x pobreza','Cidade x campo'],'Um pula sem pensar; o outro observa antes.','j6'],
+      ['Segundo o texto, qual é a função da caixa de madeira do violino?',['Deixar o som mais forte','Afinar as cordas','Segurar o arco','Proteger da chuva'],'"Funciona como um amplificador natural: deixa o som mais forte."','j7'],
+      ['No texto, "Por isso" introduz…',['uma consequência','uma oposição','uma dúvida','um exemplo'],'Como a caixa amplifica o som, a madeira e o formato mudam o timbre.','j7'],
+      ['Qual é o objetivo principal do texto?',['Explicar como o violino produz som','Contar a história de um violinista','Convencer a comprar um violino','Ensinar uma receita'],'É um texto informativo: explica o funcionamento.','j7']],
+    classes:[
+      ['Em "Ontem choveu muito", a palavra "ontem" é…',['advérbio de tempo','adjetivo','verbo','substantivo'],'Indica quando: advérbio de tempo.'],
+      ['Em "Saí com a mamãe", a palavra "com" é…',['preposição','conjunção','advérbio','artigo'],'"Com" liga palavras: preposição.'],
+      ['Em "Ai! Machuquei o dedo", a palavra "Ai" é…',['interjeição','verbo','pronome','numeral'],'Expressa emoção: interjeição.'],
+      ['Em "Comprei três cordas", a palavra "três" é…',['numeral','adjetivo','artigo','advérbio'],'Indica quantidade exata: numeral.'],
+      ['Qual destas palavras é um pronome possessivo?',['meu','eu','aquele','quem'],'Possessivo indica posse: meu, teu, seu, nosso.'],
+      ['Em "O violino dele é antigo", a palavra "antigo" é…',['adjetivo','advérbio','substantivo','verbo'],'Caracteriza o violino: adjetivo.'],
+      ['Em "Estudei, porém esqueci", a palavra "porém" é…',['conjunção','preposição','advérbio','interjeição'],'Liga duas orações com ideia de oposição.'],
+      ['Qual destas palavras é advérbio de modo?',['devagar','depois','aqui','talvez'],'Devagar diz COMO (modo). Depois = tempo; aqui = lugar; talvez = dúvida.'],
+      ['Em "Aquele tablet é da Maya", a palavra "Aquele" é…',['pronome demonstrativo','artigo definido','adjetivo','advérbio'],'Aponta a posição de algo: demonstrativo.'],
+      ['Em "O Jaquinho tocou bem", a palavra "bem" modifica…',['o verbo "tocou"','o substantivo "Jaquinho"','o artigo "O"','nenhuma palavra'],'Advérbio modifica o verbo: tocou como? Bem.']],
+    ortografia:[
+      ['Complete: "Não sei ___ ele saiu."',['por que','porque','porquê','por quê'],'Pergunta indireta: "por que" separado e sem acento.'],
+      ['Complete: "Você saiu ___?"',['por quê','porque','por que','porquê'],'No fim da pergunta: "por quê", separado e com acento.'],
+      ['Complete: "Quero entender o ___ da bronca."',['porquê','por que','porque','por quê'],'Com artigo antes ("o"), é substantivo: porquê.'],
+      ['Complete: "Daqui ___ duas semanas é o simulado."',['a','há','à','ah'],'Tempo futuro: "a".'],
+      ['Complete: "O Daniel estava de ___ humor."',['mau','mal','mais','mas'],'O contrário seria "bom humor": mau.'],
+      ['Complete: "Dormi ___ esta noite."',['mal','mau','mais','mas'],'O contrário seria "dormi bem": mal.'],
+      ['Complete: "Quero ___ uma fatia de bolo."',['mais','mas','más','mau'],'Quantidade: mais.'],
+      ['Qual palavra está escrita do jeito certo?',['paralisar','paralizar','paraliçar','parallisar'],'Paralisar se escreve com S.'],
+      ['Qual palavra está escrita do jeito certo?',['análise','análize','analize','análice'],'Análise se escreve com S.'],
+      ['Qual palavra está escrita do jeito certo?',['ascensão','acensão','assenção','ascenção'],'Ascensão: SC e S antes do ão.']],
+    acentuacao:[
+      ['Qual palavra está acentuada do jeito certo?',['árvore','arvore','arvóre','árvorê'],'Proparoxítona: sempre com acento.'],
+      ['Qual destas palavras é proparoxítona?',['música','sofá','mesa','caju'],'MÚ-si-ca: a sílaba forte é a antepenúltima.'],
+      ['Qual palavra está acentuada do jeito certo?',['fácil','facil','fácíl','fàcil'],'Paroxítona terminada em L leva acento.'],
+      ['Qual destas palavras é paroxítona?',['livro','café','pássaro','avó'],'LI-vro: sílaba forte na penúltima.'],
+      ['Qual palavra está escrita do jeito certo?',['também','tambem','tâmbem','tanbém'],'Oxítona terminada em EM leva acento.'],
+      ['Por que "açúcar" tem acento?',['É paroxítona terminada em R','É oxítona terminada em R','É proparoxítona','Toda palavra com Ç tem acento'],'a-ÇÚ-car: paroxítona terminada em R.'],
+      ['Qual destas palavras NÃO leva acento?',['mesa','sofá','lâmpada','você'],'Paroxítona terminada em A não tem acento.'],
+      ['Qual palavra está escrita do jeito certo?',['lápis','lapis','lapís','lâpis'],'Paroxítona terminada em IS leva acento.'],
+      ['Complete: "Machuquei o __ no jogo." (parte do corpo)',['pé','pe','pê','pè'],'Monossílabo tônico terminado em E leva acento: pé.'],
+      ['Qual palavra está escrita do jeito certo?',['história','historia','histórìa','histôria'],'Paroxítona terminada em ditongo: história.'],
+      ['Qual destas palavras é oxítona?',['avô','mesa','fácil','árvore'],'a-VÔ: sílaba forte na última.']],
+    concordancia:[
+      ['Complete: "___ muitas pessoas na festa." (haver = existir)',['Havia','Haviam','Houveram','Havíamos'],'Haver no sentido de existir fica no singular.'],
+      ['Complete: "Os primos ___ ao sítio."',['foram','foi','fomos','vai'],'Sujeito no plural: foram.'],
+      ['Complete: "O Jaquinho e o Daniel ___ cedo."',['acordaram','acordou','acordei','acorda'],'Sujeito composto: verbo no plural.'],
+      ['Complete: "As cordas do violino estão ___."',['afinadas','afinada','afinados','afinado'],'Cordas: feminino plural → afinadas.'],
+      ['Qual frase está correta?',['Chegaram os convidados.','Chegou os convidados.','Chegaram o convidado.','Chegou os convidado.'],'Quem chegou? Os convidados (plural): chegaram.'],
+      ['Complete: "Duas fatias ___ para o James."',['bastam','basta','bastou','bastando'],'O que basta? Duas fatias (plural): bastam.'],
+      ['Complete: "A mamãe e a Maya ___ um reels."',['gravaram','gravou','gravei','grava'],'Sujeito composto: gravaram.'],
+      ['Complete: "Eu, a Maya e o James ___ no sítio."',['brincamos','brincaram','brincou','brinco'],'Eu + outros = nós: brincamos.'],
+      ['Qual frase está correta?',['Faz dois anos que estudo violino.','Fazem dois anos que estudo violino.','Fizeram dois anos que estudo violino.','Farão dois anos que estudo violino.'],'Fazer indicando tempo fica no singular: faz.'],
+      ['Complete: "Os alunos ___ estudiosos."',['são','é','sou','és'],'Os alunos (eles) são.'],
+      ['Complete: "As provas foram ___."',['difíceis','difícil','difíceles','difícils'],'Provas (plural): difíceis.']],
+    sentido:[
+      ['"Tic-tac, tic-tac fazia o relógio." Que recurso é esse?',['Onomatopeia','Metáfora','Hipérbole','Comparação'],'Imita um som: onomatopeia.'],
+      ['"A mamãe é um furacão de tarefas." É…',['metáfora','comparação','onomatopeia','ironia'],'Compara sem "como": metáfora.'],
+      ['"Morri de rir com o Daniel." É…',['hipérbole','personificação','comparação','onomatopeia'],'Exagero: hipérbole.'],
+      ['"O sol sorriu para nós." É…',['personificação','hipérbole','onomatopeia','comparação'],'Sorrir é ação humana: personificação.'],
+      ['"Ele é teimoso como uma mula." É…',['comparação','metáfora','hipérbole','onomatopeia'],'Tem "como": comparação.'],
+      ['"Que belo trabalho!", disse o professor ao ver a prova em branco. É…',['ironia','elogio sincero','onomatopeia','hipérbole'],'Diz o contrário do que pensa: ironia.'],
+      ['"Ele faltou com a verdade" (no lugar de "ele mentiu") é um…',['eufemismo','exagero','comparação','onomatopeia'],'Suaviza uma ideia: eufemismo.'],
+      ['"Ele tem um coração de ouro" quer dizer que ele…',['é muito bondoso','é rico','tem um coração dourado','está doente'],'Sentido figurado: bondade.'],
+      ['"A cidade dormia." Dar uma ação humana à cidade é…',['personificação','hipérbole','ironia','comparação'],'Cidade não dorme: personificação.'],
+      ['"Já te chamei um milhão de vezes!" É…',['hipérbole','eufemismo','onomatopeia','metáfora'],'Exagero: hipérbole.'],
+      ['"Estar com a cabeça nas nuvens" quer dizer…',['estar distraído','estar num avião','estar com dor de cabeça','estar muito alto'],'Expressão figurada para distração.']],
+    pontuacao:[
+      ['Qual frase está pontuada corretamente?',['Daniel, meu primo, adora o sítio.','Daniel meu primo, adora o sítio.','Daniel, meu primo adora, o sítio.','Daniel meu, primo adora o sítio.'],'Aposto ("meu primo") fica entre vírgulas.'],
+      ['Qual frase está pontuada corretamente?',['Pai, posso jogar?','Pai posso, jogar?','Pai posso jogar,?','Pai, posso, jogar?'],'Vocativo separado por vírgula.'],
+      ['Qual frase tem uma vírgula ERRADA?',['O Jaquinho, toca violino.','Ontem, choveu.','Maya, vem cá!','Comprei pão, leite e ovo.'],'Não se separa o sujeito do verbo com vírgula.'],
+      ['Para que servem as aspas em: O professor disse "estudem frações".',['Para marcar a fala exata de alguém','Para fazer uma pergunta','Para separar uma lista','Para mostrar exagero'],'Aspas marcam a citação da fala.'],
+      ['Qual frase está pontuada corretamente?',['Levei três coisas: arco, partitura e violino.','Levei três coisas, arco: partitura e violino.','Levei: três coisas arco, partitura e violino.','Levei três coisas arco partitura e violino:'],'Dois-pontos anunciam a lista.'],
+      ['Em "No sábado, faremos o simulado", a vírgula separa…',['uma expressão de tempo deslocada','o sujeito do verbo','um vocativo','uma lista'],'"No sábado" veio para o começo da frase.'],
+      ['Qual frase está pontuada corretamente?',['Quando a mamãe chegou, todos comemoraram.','Quando, a mamãe chegou todos comemoraram.','Quando a mamãe, chegou todos comemoraram.','Quando a mamãe chegou todos, comemoraram.'],'A oração que começa a frase ("Quando a mamãe chegou") é separada por vírgula.'],
+      ['Qual sinal faz uma pausa maior que a vírgula, separando partes de uma frase longa?',['Ponto e vírgula (;)','Ponto de exclamação (!)','Aspas (" ")','Hífen (-)'],'Ponto e vírgula: pausa intermediária.'],
+      ['Em "São Paulo, a maior cidade do Brasil, é agitada", o trecho entre vírgulas é…',['um aposto','um vocativo','o verbo','uma pergunta'],'Explica quem é São Paulo: aposto.'],
+      ['Qual frase usa reticências para criar suspense?',['Abri a porta e vi…','Abri a porta.','Abri a porta!','Abri a porta?'],'Reticências deixam a ideia em suspenso.'],
+      ['Qual frase está pontuada corretamente?',['Jaquinho, a Maya e o James chegaram.','Jaquinho a Maya, e o James chegaram.','Jaquinho a Maya e o James, chegaram.','Jaquinho, a Maya, e, o James chegaram.'],'Vírgula entre os itens; nada antes do "e" nem antes do verbo.']],
+    verbos:[
+      ['Pretérito perfeito de "eu tenho":',['eu tive','eu teve','eu tenhei','eu tenho'],'Ter é irregular: eu tive.'],
+      ['Pretérito perfeito de "eu vou":',['eu fui','eu vi','eu vou','eu irei'],'Ir: eu fui.'],
+      ['Pretérito perfeito de "eu ponho":',['eu pus','eu ponhei','eu pôs','eu porei'],'Pôr: eu pus.'],
+      ['Pretérito perfeito de "eu trago":',['eu trouxe','eu trazi','eu trago','eu trarei'],'Trazer: eu trouxe.'],
+      ['Futuro do presente de "nós estudamos":',['nós estudaremos','nós estudávamos','nós estudamos','nós estudaríamos'],'Futuro: estudaremos.'],
+      ['Em "Se eu estudasse mais, passaria", "estudasse" está no…',['subjuntivo','imperativo','infinitivo','indicativo'],'Hipótese: subjuntivo.'],
+      ['Em "Quando você vier, traga o violino", "traga" está no…',['imperativo','futuro','pretérito','infinitivo'],'Pedido: imperativo.'],
+      ['Em "Eu tocava violino todas as tardes", o verbo está no…',['pretérito imperfeito','pretérito perfeito','futuro','presente'],'Ação repetida no passado: imperfeito.'],
+      ['Qual frase está correta?',['Se eu vir o Daniel, aviso você.','Se eu ver o Daniel, aviso você.','Se eu visse o Daniel, aviso você.','Se eu ver o Daniel, avisei você.'],'Futuro do subjuntivo de VER é "vir": se eu vir.'],
+      ['Pretérito perfeito de "ele vem":',['ele veio','ele viu','ele vinha','ele vem'],'Vir: ele veio. (Viu é de ver.)'],
+      ['Em "Talvez eu viaje amanhã", "viaje" está no…',['subjuntivo','indicativo','imperativo','infinitivo'],'Dúvida (talvez): subjuntivo.']]
+  }
+};
+
+/* ================= reforço extra (aparece quando a criança erra o assunto) + termos de referência para os pais ================= */
+const DET2 = {
+  maia: {
+    valor_posicional:{j:'Pense numa caixa de ovos com casinhas: cada algarismo mora numa casinha, e a casinha decide quanto ele vale. Mesmo número, casinha diferente, valor diferente.',e:[['No 555, quanto vale cada 5?','O da direita vale 5, o do meio vale 50 e o da esquerda vale 500. O algarismo é igual, a casa muda tudo.'],['Monte o número: 3 centenas, 0 dezenas e 8 unidades.','308. O zero entra para guardar a casa das dezenas.']],r:'valor posicional'},
+    adicao:{j:'O "vai um" é como juntar moedas: quando você tem 10 moedas de 1 real, troca por uma nota de 10. Na conta, 10 unidades viram 1 dezena e sobem para a coluna da esquerda.',e:[['58 + 27','8 + 7 = 15 → fica 5, sobe 1. 5 + 2 + 1 = 8. Resultado: 85.'],['199 + 1','9 + 1 = 10 → 0, sobe 1. 9 + 1 = 10 → 0, sobe 1. 1 + 1 = 2. Resultado: 200.']],r:'adição com reagrupamento'},
+    subtracao:{j:'Pedir emprestado é como trocar uma nota de 10 por 10 moedas de 1 para conseguir pagar. A vizinha da esquerda fica com 1 a menos, e você ganha 10.',e:[['42 − 18','2 é menor que 8: pede emprestado → 12 − 8 = 4. O 4 virou 3: 3 − 1 = 2. Resultado: 24.'],['Truque de completar: 100 − 63','De 63 para 70 faltam 7; de 70 para 100 faltam 30. Total: 37.']],r:'subtração com reagrupamento'},
+    multiplicacao:{j:'Multiplicação é um atalho para somas repetidas. Se travar, transforme em soma: 6 × 4 é 6 + 6 + 6 + 6. Use a tabuada que você já sabe para descobrir a que esqueceu.',e:[['7 × 6 (se esqueceu)','Você sabe 7 × 5 = 35. Mais um 7: 35 + 7 = 42.'],['8 × 9 (se esqueceu)','8 × 10 = 80. Tire um 8: 80 − 8 = 72.']],r:'tabuada multiplicação'},
+    divisao:{j:'Dividir é distribuir igualzinho, como dar cartas: uma para cada pessoa, depois mais uma, até acabar. A pergunta mágica é: "quantas vezes o divisor cabe no número?".',e:[['36 ÷ 4','4 × 9 = 36, então cada um recebe 9.'],['17 ÷ 5','5 × 3 = 15 e sobram 2. Resultado: 3, resto 2.']],r:'divisão'},
+    fracoes:{j:'Desenhe! Faça um círculo (uma pizza), corte no número de pedaços que o número de baixo pede e pinte os pedaços do número de cima.',e:[['Desenhe 3/4','Corte o círculo em 4 pedaços iguais e pinte 3. Sobra 1 pedaço sem pintar.'],['Metade de 18 brigadeiros','Divida em 2 grupos iguais: 9 em cada.']],r:'frações'},
+    dinheiro:{j:'Use dinheiro de brincadeira ou de verdade: pegue as notas e moedas e faça o troco "na mão", contando do preço até o valor pago. É assim que se faz no caixa da loja.',e:[['Preço R$ 4,00, paga com R$ 10,00','De 4 até 10 faltam 6. Troco: R$ 6,00.'],['Preço R$ 7,50, paga com R$ 10,00','De 7,50 até 8,00 faltam 0,50; de 8 até 10 faltam 2. Troco: R$ 2,50.']],r:'troco dinheiro'},
+    tempo:{j:'Desenhe um relógio e ande com o ponteiro. Toda vez que o ponteiro grande dá uma volta inteira (60 minutos), o pequeno anda uma hora.',e:[['8h50 + 20 minutos','Até 9h00 faltam 10 minutos; sobram mais 10. Resultado: 9h10.'],['De 10h30 até 12h00','10h30 → 11h00 = 30 min; 11h00 → 12h00 = 60 min. Total: 1 hora e meia.']],r:'horas e minutos'},
+    perimetro:{j:'Imagine uma formiguinha andando em volta da figura: perímetro é o caminho inteiro que ela faz até voltar ao ponto de partida.',e:[['Triângulo de lados 3, 4 e 5 cm','3 + 4 + 5 = 12 cm.'],['Retângulo de 10 m por 2 m','10 + 2 + 10 + 2 = 24 m.']],r:'perímetro'},
+    ortografia:{j:'Leia a palavra em voz alta, devagar, e preste atenção no som. Depois, pense numa palavra da mesma família: ela costuma usar a mesma letra.',e:[['Massa ou maça?','Massa (de bolo) tem SS. Maçã (fruta) tem Ç e til. Som parecido, palavras diferentes!'],['Chave ou xave?','Chave, com CH. Da família de chaveiro.']],r:'ortografia'},
+    pontuacao:{j:'Leia a frase em voz alta. Se sua voz sobe no fim, é pergunta (?). Se fala com emoção, é exclamação (!). Se só conta algo, é ponto final (.).',e:[['Você trouxe o laço','A voz sobe: "Você trouxe o laço?"'],['Que susto','Emoção: "Que susto!"']],r:'pontuação sinais'},
+    classes:{j:'Faça três perguntas: Qual é o NOME? (substantivo). COMO ele é? (adjetivo). O que ele FAZ? (verbo).',e:[['"A borboleta colorida voou."','Nome: borboleta. Como é: colorida. O que faz: voou.'],['"O bolo gostoso acabou."','Nome: bolo. Como é: gostoso. O que fez: acabou.']],r:'substantivo adjetivo verbo'},
+    sinonimos:{j:'Para sinônimo, troque a palavra na frase: se o sentido continua igual, acertou. Para antônimo, pense no oposto, como um espelho.',e:[['"O gato é rápido" → troque por veloz','"O gato é veloz": mesmo sentido, então são sinônimos.'],['Antônimo de "subir"','Descer: um vai para cima, o outro para baixo.']],r:'sinônimos e antônimos'},
+    plural:{j:'Olhe o FINAL da palavra: é ele que diz a regra. Termina em vogal? Só põe S. Em R, S ou Z? Põe ES. Em L? Troca por IS. Em ÃO? Pense em como se fala ("pães", "mãos", "balões").',e:[['Flor, colher, mar','Terminam em R: flores, colheres, mares.'],['Funil, barril','IL vira IS: funis, barris.']],r:'plural das palavras'},
+    interpretacao:{j:'Leia o texto como um detetive: sublinhe nomes, números e palavras de tempo. Depois volte na pergunta e procure a pista no texto.',e:[['Pergunta "quem?"','Procure nomes de pessoas ou personagens.'],['Pergunta "por quê?"','Procure "porque", "pois", "então", "por isso".']],r:'interpretação de texto'}
+  },
+  jaquinho: {
+    expressoes:{j:'Trate a expressão como uma fila com prioridade: parênteses passam na frente, depois potência, depois × e ÷ (na ordem em que aparecem), e por último + e −. Reescreva a expressão a cada passo, linha por linha.',e:[['3 + 4 × 2 − 6 ÷ 3','4 × 2 = 8 e 6 ÷ 3 = 2 → 3 + 8 − 2 = 9.'],['[20 − (3 + 2) × 2] ÷ 5','(3 + 2) = 5; 5 × 2 = 10; 20 − 10 = 10; 10 ÷ 5 = 2.']],r:'expressões numéricas'},
+    potencias:{j:'Escreva a multiplicação por extenso antes de calcular: 2⁴ = 2 × 2 × 2 × 2. Isso evita o erro de multiplicar base por expoente.',e:[['5²  e  2⁵','5 × 5 = 25. 2 × 2 × 2 × 2 × 2 = 32. Ordem trocada, resultado diferente!'],['10⁴','1 seguido de 4 zeros: 10.000.']],r:'potenciação'},
+    mmc_mdc:{j:'Pergunta-chave: os eventos vão se ENCONTRAR de novo (MMC, resposta maior que os números) ou vou DIVIDIR em grupos (MDC, resposta menor que os números)?',e:[['Alarme a cada 6 min e a cada 9 min','MMC(6, 9) = 18: tocam juntos de novo em 18 minutos.'],['24 violetas e 36 rosas em vasos iguais, o máximo de vasos','MDC(24, 36) = 12 vasos, com 2 violetas e 3 rosas em cada.']],r:'mmc e mdc'},
+    fracoes_soma:{j:'Pense em fatias de pizzas cortadas de jeitos diferentes: não dá para somar fatia de 1/2 com fatia de 1/3 sem antes recortar as duas pizzas no mesmo tamanho de fatia (o MMC).',e:[['1/3 + 1/6','MMC = 6. 1/3 = 2/6. 2/6 + 1/6 = 3/6 = 1/2.'],['2/5 + 1/2','MMC = 10. 4/10 + 5/10 = 9/10.']],r:'adição de frações'},
+    fracao_quantidade:{j:'Desenhe uma barra dividida em partes iguais (o número de baixo). Descubra quanto vale cada parte e conte as partes que a fração pede (o número de cima).',e:[['2/7 de 35','Cada parte: 35 ÷ 7 = 5. Duas partes: 10.'],['3/4 de 120','Cada parte: 30. Três partes: 90.']],r:'fração de uma quantidade'},
+    decimais:{j:'Pense em dinheiro: 3,5 é R$ 3,50. Somar e subtrair decimais é como fazer conta de reais e centavos: vírgula embaixo de vírgula.',e:[['5,2 − 1,75','5,20 − 1,75 = 3,45.'],['0,4 × 0,2','4 × 2 = 8 com 2 casas decimais: 0,08.']],r:'números decimais operações'},
+    porcentagem:{j:'Ache sempre os 10% primeiro (dividir por 10) e monte o resto a partir dele: 20% é o dobro, 5% é a metade, 30% é o triplo.',e:[['30% de 70','10% = 7, então 30% = 21.'],['Preço R$ 250 com 15% de desconto','10% = 25; 5% = 12,50; 15% = 37,50. Paga 212,50.']],r:'porcentagem'},
+    area:{j:'Imagine o chão coberto de azulejos de 1 por 1: a área é quantos azulejos cabem. Num retângulo, são fileiras × colunas. No triângulo, é a metade do retângulo que o envolve.',e:[['Retângulo 7 × 3','7 × 3 = 21 quadradinhos: 21 unidades de área.'],['Figura em L: retângulo 6 × 2 + quadrado 2 × 2','12 + 4 = 16.']],r:'área de figuras planas'},
+    divisibilidade:{j:'Use as regras como filtros rápidos antes de fazer a conta inteira: olhe o último algarismo (2, 5, 10), os dois últimos (4) ou a soma dos algarismos (3 e 9).',e:[['738 é divisível por 9?','7 + 3 + 8 = 18, múltiplo de 9: sim (738 ÷ 9 = 82).'],['1.316 é divisível por 4?','Os dois últimos formam 16, múltiplo de 4: sim.']],r:'critérios de divisibilidade'},
+    interpretacao:{j:'Antes de responder, explique o texto em uma frase, como se contasse para o Daniel. Se não consegue, releia. Depois elimine as alternativas que exageram ou que o texto não diz.',e:[['Alternativa com "sempre" ou "nunca"','Desconfie: textos raramente dizem coisas absolutas.'],['Alternativa verdadeira na vida, mas fora do texto','Está errada: a resposta tem que estar apoiada no texto.']],r:'interpretação de texto'},
+    classes:{j:'Faça o teste da função: a palavra dá nome (substantivo)? caracteriza (adjetivo)? indica ação (verbo)? modifica o verbo (advérbio)? substitui o nome (pronome)? liga palavras (preposição) ou orações (conjunção)?',e:[['"Ela chegou cedo para o ensaio."','Ela = pronome; chegou = verbo; cedo = advérbio; para = preposição; o = artigo; ensaio = substantivo.'],['"Toquei bem, mas cansei."','bem = advérbio; mas = conjunção (liga as duas orações).']],r:'classes gramaticais'},
+    ortografia:{j:'Teste de troca: se couber "porém", é MAS. Se couber "bem" no contrário, é MAL; se couber "bom", é MAU. Se der para trocar por "faz" (tempo), é HÁ.',e:[['"___ três dias choveu."','Faz três dias → Há três dias.'],['"Ele é um ___ jogador."','O contrário: bom jogador → mau jogador.']],r:'porque por que mal mau há a'},
+    acentuacao:{j:'Chame a palavra como se gritasse alguém de longe: a sílaba que você estica é a tônica. Depois aplique a regra da posição dela.',e:[['MÉ-di-co','Tônica na antepenúltima: proparoxítona, tem acento.'],['ca-DE-ra','Paroxítona terminada em A: sem acento (cadeira).']],r:'acentuação gráfica regras'},
+    concordancia:{j:'Ache o sujeito perguntando ao verbo: "quem?" ou "o quê?". Depois confira se o verbo está no mesmo número (singular ou plural) que a resposta.',e:[['"Faltou/Faltaram duas canetas"','O que faltou? Duas canetas (plural) → faltaram.'],['"Houve/Houveram problemas"','Haver = existir fica no singular → houve problemas.']],r:'concordância verbal e nominal'},
+    sentido:{j:'Pergunte sempre: isso é literal (aconteceu de verdade) ou é um jeito de falar? Se é jeito de falar, procure a pista: "como" (comparação), exagero (hipérbole), coisa agindo como gente (personificação), som (onomatopeia).',e:[['"Chorei um rio de lágrimas."','Exagero: hipérbole.'],['"O violino gemia baixinho."','Violino agindo como gente: personificação.']],r:'figuras de linguagem'},
+    pontuacao:{j:'Leia a frase sem vírgula e em voz alta: onde você faz pausa natural para explicar algo (aposto) ou chamar alguém (vocativo), vai vírgula. Entre sujeito e verbo, nunca.',e:[['"Professor eu terminei."','Vocativo: "Professor, eu terminei."'],['"O Daniel que é meu primo veio."','Explicação: "O Daniel, que é meu primo, veio."']],r:'uso da vírgula'},
+    verbos:{j:'Monte uma tabela com os irregulares que mais caem (fazer, ter, ir, ser, pôr, trazer, ver, vir) e conjugue em voz alta no passado e no futuro: eu fiz, ele fez, nós fizemos…',e:[['Fazer no passado','Eu fiz, você fez, nós fizemos, eles fizeram.'],['Ver x vir no subjuntivo','Quando eu vir (ver); quando eu vier (vir).']],r:'verbos irregulares conjugação'}
+  }
+};
+const refLinks = termo => [
+  ['Khan Academy (vídeos e exercícios)','https://pt.khanacademy.org/search?page_search_query='+encodeURIComponent(termo)],
+  ['Toda Matéria (explicação em texto)','https://www.todamateria.com.br/?s='+encodeURIComponent(termo)],
+  ['Brasil Escola (explicação em texto)','https://brasilescola.uol.com.br/busca?q='+encodeURIComponent(termo)]
+];
+
+/* ================= banco de Português unificado (PT antigo + PTX novo) ================= */
+const BANCO_PT={};
+function bancoPT(k){
+  if(BANCO_PT[k]) return BANCO_PT[k];
+  const lista=PT[k].map(([s,q,ops,ex,tx],i)=>({skill:s,qid:k+'-pt-'+i,q,ops,ex,tx}));
+  for(const [s,l] of Object.entries(PTX[k]||{})) l.forEach(([q,ops,ex,tx],j)=>lista.push({skill:s,qid:k+'-ptx-'+s+'-'+j,q,ops,ex,tx}));
+  const map={}; lista.forEach(o=>map[o.qid]=o);
+  return BANCO_PT[k]={lista,map};
+}
+
+/* ================= login simples ================= */
+/* SHA-256 (só para não deixar as senhas escritas no código; não é segurança de banco). */
+function sha256(txt){
+  let ascii=unescape(encodeURIComponent(txt));
+  const rr=(v,a)=>(v>>>a)|(v<<(32-a)), max=Math.pow(2,32), words=[], bits=ascii.length*8;
+  let hash=[], k=[], pc=0; const comp={};
+  for(let c=2;pc<64;c++){ if(!comp[c]){ for(let i=0;i<313;i+=c) comp[i]=c; hash[pc]=(Math.pow(c,.5)*max)|0; k[pc++]=(Math.pow(c,1/3)*max)|0; } }
+  hash=hash.slice(0,8); ascii+='\x80'; while(ascii.length%64-56) ascii+='\x00';
+  for(let i=0;i<ascii.length;i++) words[i>>2]|=ascii.charCodeAt(i)<<((3-i)%4)*8;
+  words[words.length]=(bits/max)|0; words[words.length]=bits;
+  for(let j=0;j<words.length;){
+    const w=words.slice(j,j+=16), old=hash; hash=hash.slice(0,8);
+    for(let i=0;i<64;i++){
+      const w15=w[i-15], w2=w[i-2], a=hash[0], e=hash[4];
+      const t1=hash[7]+(rr(e,6)^rr(e,11)^rr(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]+(w[i]=(i<16)?w[i]:(w[i-16]+(rr(w15,7)^rr(w15,18)^(w15>>>3))+w[i-7]+(rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+      const t2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash=[(t1+t2)|0].concat(hash); hash[4]=(hash[4]+t1)|0;
+    }
+    for(let i=0;i<8;i++) hash[i]=(hash[i]+old[i])|0;
+  }
+  let out=''; for(let i=0;i<8;i++) for(let j=3;j+1;j--){ const b=(hash[i]>>(j*8))&255; out+=(b<16?'0':'')+b.toString(16); }
+  return out;
+}
+const hashSenha=(u,s)=>sha256('missao-bolsa:'+u+':'+String(s).trim());
+const USUARIOS={
+  maia:{nome:'Maya', h:'c576b789137a5518d23e4896c093ccbdf39b430df1670abe617cec82c7ee6fdb', apelidos:['maya','maia']},
+  jaquinho:{nome:'Jaquinho', h:'0e408777e885f3c7aae1fbb0af20319a9ab1da6387289b7c099f435787eff415', apelidos:['jaquinho','jacquinho','jaquinho lane']},
+  papai:{nome:'Papai', h:'86c607577dec19a9c32cbbc432aa6cd2be42a6a85eb662a17517201228098482', apelidos:['papai','pai']}   // senha provisória "papai": troque no Painel do pai
+};
+const semAcento=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+function acharUsuario(nome){ const n=semAcento(nome); return Object.keys(USUARIOS).find(u=>USUARIOS[u].apelidos.includes(n)||semAcento(USUARIOS[u].nome)===n)||null; }
+function senhaOk(u,senha){ const h=hashSenha(u,senha); return u==='papai' && cfg.papaiHash ? h===cfg.papaiHash : h===USUARIOS[u].h; }
+const LSU='missao-bolsa-login';
+let user=null; try{ const u=localStorage.getItem(LSU); if(u&&USUARIOS[u]) user=u; }catch(e){}
+const ehPai=()=>user==='papai';
+
+/* ================= degraus do troco (Maya) ================= */
+/* 1 = reais inteiros · 2 = centavos ,00/,50 · 3 = centavos quebrados. Sobe depois de 4 acertos seguidos no degrau; desce depois de 3 erros seguidos. */
+function degrauTroco(){
+  let nv=1, ok=0, er=0;
+  for(const i of itemsDe('maia').filter(i=>i.skill==='dinheiro' && i.nv)){
+    if(i.nv!==nv) continue;
+    if(i.ok){ ok++; er=0; if(ok>=4 && nv<3){ nv++; ok=0; } }
+    else { er++; ok=0; if(er>=3 && nv>1){ nv--; er=0; } }
+  }
+  return nv;
+}
+
+/* ================= tempo por questão e freio de pressa ================= */
+const limPressa=q=>q.texto?7:4;   // segundos mínimos antes de responder sem confirmação
+
+/* ================= salvar também o que foi respondido no meio ================= */
+function respondidas(r){ return r ? r.qs.map((q,i)=>({q,i})).filter(o=>r.resp[o.i]!=null) : []; }
+function sessaoDoRun(parcial){
+  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; return o; });
+  const s={id:run.id, kid:run.kid, tipo:run.tipo, date:today(), ts, serie:serieDe(run.kid), dur:Math.round((ts-run.t0)/1000), items:its, score:its.filter(i=>i.ok).length};
+  if(parcial) s.parcial=true;
+  return s;
+}
+/* Chamado ao trocar de aba, de criança, sair, ou quando o tablet apaga a tela: o que já foi respondido (inclusive o errado) fica salvo. */
+function salvarParcial(){
+  if(!run || run.fim || run.tipo==='refazer' || !respondidas(run).length) return false;
+  upsertSession(sessaoDoRun(true)); enviarFila(); return true;
+}
+
+/* ================= estado e armazenamento ================= */
+/* ---- Onde os treinos ficam salvos: Google Planilha via Apps Script (mesmo modelo do sistema da floricultura) ---- */
+const API_URL = 'https://script.google.com/macros/s/AKfycbx0X0ynsWZYjWvS_ehZt5LKk3_L3F4VGUgijW3nv7tsmGpG0XLRUCziiksPBbvfsinZ7Q/exec';   // termina em /exec — ver passo a passo no CLAUDE.md
+const TOKEN = 'mb-db211c7bc8334f33975a4b5e';
+let sessions=[], cfg={maiaSerie:4}, kid='jaquinho', view='treino', run=null, storeMode='local';
+const LS='missao-bolsa-v1', LSQ='missao-bolsa-fila';
+function loadLocal(){ try{ const j=JSON.parse(localStorage.getItem(LS)||'{}'); sessions=j.sessions||[]; cfg=Object.assign(cfg,j.cfg||{}); }catch(e){} }
+function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify({sessions,cfg})); }catch(e){} }
+function fila(){ try{ return JSON.parse(localStorage.getItem(LSQ)||'[]'); }catch(e){ return []; } }
+function setFila(q){ try{ localStorage.setItem(LSQ, JSON.stringify(q)); }catch(e){} }
+try{ const k=localStorage.getItem(LS+'-kid'); if(k&&KIDS[k]) kid=k; }catch(e){}
+loadLocal();
+const apiOk = () => API_URL.startsWith('https://');
+
+/* Busca todos os treinos da planilha (junta com os que ainda estão na fila deste tablet). */
+async function initDb(){
+  if(!apiOk()){ storeMode='local'; note(); render(); return; }
+  try{
+    const r = await fetch(API_URL+'?token='+encodeURIComponent(TOKEN)+'&acao=dados',{cache:'no-store'}).then(x=>x.json());
+    if(!r.ok) throw new Error(r.erro);
+    const porId = new Map(r.sessoes.map(x=>[x.id,x]));
+    fila().filter(x=>x.acao==='salvarSessao').forEach(x=>porId.set(x.sessao.id,x.sessao));   // o que está na fila é mais novo
+    sessions = [...porId.values()];
+    if(run && run.resp.some(x=>x!=null)) sessions = sessions.filter(x=>x.id!==run.id).concat(sessoesRunAtual());
+    if(r.config && r.config.maiaSerie) cfg.maiaSerie = Number(r.config.maiaSerie);
+    if(r.config && r.config.papaiHash) cfg.papaiHash = String(r.config.papaiHash);
+    storeMode='db'; saveLocal();
+  }catch(e){ storeMode='offline'; }
+  note(); if(!run) render(); enviarFila();
+}
+/* Envia o que estiver pendente (treinos feitos sem internet também chegam depois). */
+let enviando=false;
+async function enviarFila(){
+  if(!apiOk() || enviando) return; enviando=true;
+  try{
+    let q=fila();
+    while(q.length){
+      const item=q[0];
+      const r = await fetch(API_URL,{method:'POST',body:JSON.stringify(Object.assign({token:TOKEN},item))}).then(x=>x.json());
+      if(!r.ok) break;
+      q=fila().filter(x=>x.fid!==item.fid); setFila(q);   // relê a fila: pode ter entrado coisa nova enquanto enviava
+    }
+    storeMode = q.length ? 'offline' : 'db';
+  }catch(e){ storeMode='offline'; }
+  enviando=false; note();
+}
+function note(){ $('#savenote').textContent = storeMode==='db' ? 'Treinos salvos na planilha da Missão Bolsa: aparecem em qualquer aparelho e no Painel do pai.' : storeMode==='offline' ? 'Sem internet agora: os treinos ficam guardados neste tablet e são enviados quando a conexão voltar.' : 'Salvando só neste aparelho (falta configurar a planilha).'; }
+const novoFid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+/* Grava (ou atualiza, pelo id) um treino: primeiro no tablet, na hora; depois na planilha. */
+function upsertSession(s){
+  const i=sessions.findIndex(x=>x.id===s.id); if(i>=0) sessions[i]=s; else sessions.push(s); saveLocal();
+  const q=fila().filter(x=>!(x.acao==='salvarSessao' && x.sessao.id===s.id)); q.push({fid:novoFid(),acao:'salvarSessao',sessao:s}); setFila(q);
+}
+function sessoesRunAtual(){ return run && !run.fim ? [sessaoDoRun(true)] : []; }
+async function saveSession(s){ upsertSession(s); await enviarFila(); }
+async function saveCfg(extra){ saveLocal(); const q=fila(); q.push({fid:novoFid(),acao:'salvarConfig',config:Object.assign({maiaSerie:cfg.maiaSerie},extra||{})}); setFila(q); await enviarFila(); }
+window.addEventListener('online', enviarFila);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') salvarParcial(); else if(!run) initDb(); });
+window.addEventListener('pagehide', ()=>salvarParcial());
+
+/* ================= métricas ================= */
+const serieDe = k => k==='maia' ? (cfg.maiaSerie||4) : 7;
+function itemsDe(k){ return sessions.filter(s=>s.kid===k).sort((a,b)=>a.ts-b.ts).flatMap(s=>s.items.map(i=>({...i,date:s.date}))); }
+function maestria(k){
+  /* Questão de Português repetida (já respondida antes) vale meio ponto: decorar a resposta não infla o domínio. */
+  const visto=new Set(), it=itemsDe(k).map(i=>{ let w=1; if(!SKILLS[k][i.skill]?.mat){ if(visto.has(i.qid)) w=.5; visto.add(i.qid); } return {...i,w}; }), out={};
+  for(const sk of Object.keys(SKILLS[k])){ const l=it.filter(i=>i.skill===sk).slice(-12); const c=l.reduce((a,i)=>a+(i.ok?i.w:0),0), wn=l.reduce((a,i)=>a+i.w,0); out[sk]={n:l.length,c,wn,m:(c+1)/(wn+2)}; }
+  return out;
+}
+function nivel(s){ if(s.n<3) return {t:'Novo',c:'b0'}; if(s.m<.5) return {t:'Treinar mais',c:'b1'}; if(s.m<.75) return {t:'Quase lá',c:'b2'}; return {t:'Dominado',c:'b3'}; }
+function sequencia(k){
+  const dias=new Set(sessions.filter(s=>s.kid===k).map(s=>s.date)); let n=0; const d=new Date();
+  if(!dias.has(today())) d.setDate(d.getDate()-1);
+  for(;;){ const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); if(dias.has(key)){ n++; d.setDate(d.getDate()-1);} else break; }
+  return n;
+}
+function acerto(k,mat){ const it=itemsDe(k).filter(i=>!!SKILLS[k][i.skill]?.mat===mat).slice(-40); return it.length? Math.round(100*it.filter(i=>i.ok).length/it.length) : null; }
+function foco(k,n=3){ const m=maestria(k); return Object.entries(m).sort((a,b)=>(a[1].n<3?.55:a[1].m)-(b[1].n<3?.55:b[1].m)).slice(0,n).map(([sk])=>sk); }
+
+/* ================= montagem do treino ================= */
+const diasEntre=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+/* Reforço com repetição espaçada: o que errou volta depois de 1 dia; acertou, volta depois de 3; acertou de novo, está fixado. */
+function devidos(k){
+  const st={};
+  for(const s of sessions.filter(x=>x.kid===k).sort((a,b)=>a.ts-b.ts)) for(const it of s.items){
+    const mat=!!SKILLS[k][it.skill]?.mat; const key=mat?'sk:'+it.skill:it.qid;
+    if(!it.ok) st[key]={nivel:0,last:s.date,skill:it.skill,qid:it.qid,mat};
+    else if(st[key] && s.date>st[key].last){ st[key].nivel++; st[key].last=s.date; if(st[key].nivel>=2) delete st[key]; }
+  }
+  const hoje=today();
+  return Object.values(st).filter(x=>diasEntre(x.last,hoje)>=(x.nivel===0?1:3)).sort((a,b)=>a.last<b.last?-1:1);
+}
+function questaoPT(k,o,extra){ const sh=shuffle(o.ops); return {skill:o.skill,qid:o.qid,q:o.q,texto:o.tx?TX[o.tx]:null,options:sh,a:sh.indexOf(o.ops[0]),ex:o.ex,...extra}; }
+function questaoMat(k,sk,extra){ const nv=(k==='maia'&&sk==='dinheiro')?degrauTroco():undefined; const g=GEN[k][sk](serieDe(k),nv); return {skill:sk,qid:sk+'-gen',q:g.q,options:g.options,a:g.a,ex:g.ex,...(nv?{nv}:{}),...extra}; }
+/* Quando a criança viu cada questão de Português pela última vez (-1 = nunca viu). */
+function ultimaVez(k){ const m={}; itemsDe(k).forEach((i,n)=>m[i.qid]=n); return q=>q in m?m[q]:-1; }
+function escolherPT(k,banco,uv){ if(!banco.length) return null; const nunca=banco.filter(o=>uv(o.qid)<0); if(nunca.length) return pick(nunca); return pick([...banco].sort((a,b)=>uv(a.qid)-uv(b.qid)).slice(0,3)); }
+function montarTreino(k,tipo='treino'){
+  const nMat = tipo==='simulado' ? (k==='jaquinho'?15:10) : 5, nPt=nMat;
+  const m=maestria(k), skills=Object.keys(SKILLS[k]);
+  const B=bancoPT(k), uv=ultimaVez(k);
+  const qs=[]; const usados=new Set(); let fMat=nMat, fPt=nPt; const cont={};
+  if(tipo==='treino'){
+    for(const d of devidos(k).slice(0,3)){
+      if(d.mat && fMat>0){ qs.push(questaoMat(k,d.skill,{reforco:true})); fMat--; cont[d.skill]=(cont[d.skill]||0)+1; }
+      else if(!d.mat && fPt>0){ const o=B.map[d.qid]; if(o){ qs.push(questaoPT(k,o,{reforco:true})); usados.add(o.qid); fPt--; cont[d.skill]=(cont[d.skill]||0)+1; } }
+    }
+  }
+  const peso=sk=>{ if(tipo==='simulado') return 1; const s=m[sk]; return s.n<3 ? 1 : Math.pow(1-s.m,1.5)+0.12; };
+  const lim = tipo==='simulado' ? 3 : 2;
+  const sortear=pool=>{ const tot=pool.reduce((a,s)=>a+peso(s),0); let r=Math.random()*tot; for(const s of pool){ r-=peso(s); if(r<=0) return s; } return pool[pool.length-1]; };
+  const mats=skills.filter(s=>SKILLS[k][s].mat), pts=skills.filter(s=>!SKILLS[k][s].mat);
+  const escolhidas=[];
+  for(const t of [...Array(fMat).fill('mat'),...Array(fPt).fill('pt')]){ let pool=(t==='mat'?mats:pts).filter(s=>(cont[s]||0)<lim); if(!pool.length) pool=t==='mat'?mats:pts; const sk=sortear(pool); cont[sk]=(cont[sk]||0)+1; escolhidas.push(sk); }
+  for(const sk of escolhidas){
+    if(SKILLS[k][sk].mat) qs.push(questaoMat(k,sk,{}));
+    else{
+      const o=escolherPT(k,B.lista.filter(o=>o.skill===sk && !usados.has(o.qid)),uv) || escolherPT(k,B.lista.filter(o=>!usados.has(o.qid)),uv);
+      if(o){ usados.add(o.qid); qs.push(questaoPT(k,o,{})); }
+    }
+  }
+  return tipo==='simulado' ? qs.sort((a,b)=>(SKILLS[k][b.skill].mat?1:0)-(SKILLS[k][a.skill].mat?1:0)) : shuffle(qs);
+}
+function montarPratica(k,sk){
+  if(SKILLS[k][sk].mat) return Array.from({length:5},()=>questaoMat(k,sk,{}));
+  const uv=ultimaVez(k);
+  return shuffle(bancoPT(k).lista.filter(o=>o.skill===sk)).sort((a,b)=>uv(a.qid)-uv(b.qid)).slice(0,5).map(o=>questaoPT(k,o,{}));
+}
+function iniciarRun(qs,tipo){ const t0=Date.now(); run={id:kid+'-'+t0,kid,qs,i:0,resp:[],tq:[],rap:[],t0,qT0:t0,tipo}; }
+function novaRun(tipo){ iniciarRun(montarTreino(kid,tipo),tipo); render(); }
+const mmss=sec=>Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+
+/* ================= desenho ================= */
+function estrela(on,size=28){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" fill="${on?'var(--gold)':'var(--line)'}"/></svg>`; }
+function setKid(k){ if(!ehPai()) return; salvarParcial(); kid=k; try{localStorage.setItem(LS+'-kid',k);}catch(e){} run=null; render(); }
+function setView(v){ if(v==='painel' && !ehPai()) return; if(v!=='treino'){ salvarParcial(); run=null; } view=v; render(); }
+function sair(){ salvarParcial(); run=null; user=null; view='treino'; try{ localStorage.removeItem(LSU); }catch(e){} render(); }
+function entrar(u){ user=u; try{ localStorage.setItem(LSU,u); }catch(e){} if(u!=='papai'){ kid=u; if(view==='painel') view='treino'; } else view='painel'; run=null; render(); window.scrollTo({top:0}); }
+
+function render(){
+  if(user && user!=='papai') kid=user;
+  document.body.className='k-'+kid;
+  $('.kids').hidden = !ehPai(); $('#tab-painel').hidden = !ehPai(); $('nav.tabs').hidden = !user; $('#userbox').hidden = !user;
+  if(user) $('#quem').textContent = ehPai() ? 'Papai' : KIDS[kid].nome;
+  if(!user){ $('#sub').textContent='Treino diário de Português e Matemática'; $('#view').innerHTML=telaLogin(); ligarLogin(); return; }
+  document.querySelectorAll('.kid').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.kid===kid)));
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.view===view)));
+  $('#sub').textContent = view==='painel' ? 'Painel do pai: onde cada um precisa focar' : `Treino diário de Português e Matemática · ${KIDS[kid].nome}, ${serieDe(kid)}º ano em 2027`;
+  const v=$('#view');
+  if(view==='treino') v.innerHTML = run ? (run.fim ? telaFim() : telaQuestao()) : telaInicio();
+  else if(view==='evolucao') v.innerHTML = telaEvolucao(kid, false);
+  else if(view==='estudar') v.innerHTML = telaEstudar();
+  else v.innerHTML = telaPainel();
+  ligar();
+}
+
+function telaLogin(){
+  return `<section class="card login"><h2>Quem vai treinar?</h2><p class="muted">Digite o seu nome e a sua senha. Neste tablet, fica salvo: só precisa fazer uma vez.</p>
+  <form id="flogin" class="login" style="margin:0;display:flex;flex-direction:column;gap:14px" autocomplete="on">
+    <label>Nome<input id="lnome" name="username" autocomplete="username" autocapitalize="words" required></label>
+    <label>Senha<input id="lsenha" name="password" type="password" autocomplete="current-password" required></label>
+    <p class="erro" id="lerro" role="alert"></p>
+    <button class="btn" id="lentrar" type="submit">Entrar</button>
+  </form></section>`;
+}
+function ligarLogin(){
+  $('#flogin')?.addEventListener('submit',async e=>{ e.preventDefault();
+    const u=acharUsuario($('#lnome').value), s=$('#lsenha').value;
+    if(!u){ $('#lerro').textContent='Não achei esse nome. É Maya, Jaquinho ou Papai.'; return; }
+    if(u==='papai' && !senhaOk(u,s) && apiOk()){ await dbPronto; }   // a senha nova do papai pode estar chegando da planilha
+    if(!senhaOk(u,s)){ $('#lerro').textContent='Senha errada. Tenta de novo.'; $('#lsenha').select(); return; }
+    entrar(u);
+  });
+}
+function telaInicio(){
+  const K=KIDS[kid], seq=sequencia(kid), feitoHoje=sessions.some(s=>s.kid===kid&&s.date===today()&&(s.tipo||'treino')==='treino'&&!s.parcial), f=foco(kid,2).map(s=>SKILLS[kid][s].nome), rev=devidos(kid).length;
+  const nSim = kid==='jaquinho'?30:20;
+  return `<section class="card">
+    <div class="hero">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h2>${feitoHoje?'Treino de hoje feito! Quer mais um?':`${K.ola} Bora para a missão de hoje?`}</h2>
+        <p class="muted">10 questões: 5 de Matemática e 5 de Português. Leva uns 15 minutos.${rev?` Hoje voltam ${Math.min(rev,3)} ${Math.min(rev,3)===1?'questão':'questões'} de reforço, das que você errou antes.`:''}</p>
+        <div class="stats"><span class="pill">${estrela(true,16)} ${seq} ${seq===1?'dia seguido':'dias seguidos'}</span><span class="pill">Foco: ${f.join(' e ')}</span>${rev?`<span class="pill">Reforço: ${rev}</span>`:''}</div>
+      </div>
+      <button class="btn" id="start">Começar treino</button>
+    </div>
+  </section>
+  <section class="card">
+    <div class="row" style="justify-content:space-between">
+      <div style="display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 280px"><h3>Simulado da prova</h3><p class="muted">${nSim} questões, metade de cada matéria, como no dia da prova. A correção só aparece no final. Bom para fazer uma vez por semana.</p></div>
+      <button class="btn ghost" id="simulado">Fazer simulado</button>
+    </div>
+  </section>
+  ${telaEvolucao(kid,true)}`;
+}
+
+function telaQuestao(){
+  const q=run.qs[run.i], resp=run.resp[run.i], K=KIDS[kid], sim=run.tipo==='simulado';
+  const letras='ABCD';
+  const opts=q.options.map((o,j)=>{ let cls=''; if(resp!=null){ if(sim){ if(j===resp) cls='sel'; } else { if(j===q.a) cls='ok'; else if(j===resp) cls='no'; } }
+    if(resp==null && run.pend===j) cls='pend';
+    return `<button class="opt ${cls}" id="opt-${j}" data-j="${j}" ${resp!=null?'disabled':''}><span class="l">${letras[j]}</span><span>${esc(o)}</span></button>`; }).join('');
+  const pressa = resp==null && run.pend!=null ? `<div class="pressa" role="status" id="pressa">Opa, foi rápido demais! ${kid==='maia'?'Leu tudo com calma, linda?':'Leu o enunciado inteiro?'} Se tiver certeza, toque de novo na mesma resposta. Se não, troque.</div>` : '';
+  let fb=''; if(resp!=null && !sim){ const ok=resp===q.a; fb=`<div class="feedback ${ok?'ok':'no'}" role="status"><b>${esc(ok?pick(K.vivas):pick(K.forca))}</b><span>${esc(q.ex)}</span></div>`; }
+  const titulo = sim ? 'Simulado' : run.tipo==='refazer' ? 'Refazendo' : run.tipo==='pratica' ? 'Praticando' : '';
+  return `<section class="card">
+    <div class="qhead"><span class="row" style="gap:6px">${q.reforco?'<span class="tag ref">Reforço</span>':''}${titulo?`<span class="tag ref">${titulo}</span>`:''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${q.nv} de 3`:''}</span></span><span>${sim?`<span id="timer">${mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
+    <div class="progress" aria-hidden="true"><i style="width:${(run.i+(resp!=null?1:0))/run.qs.length*100}%"></i></div>
+    ${q.texto?`<div class="texto">${esc(q.texto)}</div>`:''}
+    <p class="qtext">${esc(q.q)}</p>
+    <div class="opts">${opts}</div>
+    ${pressa}${fb}
+    ${resp!=null?`<div class="row"><button class="btn" id="next">${run.i+1<run.qs.length?'Próxima':'Ver resultado'}</button></div>`:''}
+  </section>`;
+}
+
+function telaFim(){
+  const c=run.qs.filter((q,i)=>run.resp[i]===q.a).length, t=run.qs.length, pct=Math.round(100*c/t), st=pct>=90?3:pct>=70?2:pct>=50?1:0;
+  const erradas=run.qs.map((q,i)=>({q,i})).filter(o=>run.resp[o.i]!==o.q.a);
+  const errSk=[...new Set(erradas.map(o=>o.q.skill))];
+  if(run.tipo==='refazer') return `<section class="card" style="align-items:center;text-align:center"><p class="muted">Refazendo as que errou</p><div class="big">${c}<span class="muted" style="font-size:28px"> / ${t}</span></div><h2>${c===t?'Agora foi! Essas questões voltam daqui a alguns dias para fixar de vez.':'Quase! Essas voltam como reforço nos próximos treinos.'}</h2><div class="row" style="justify-content:center"><button class="btn" id="estudar-erros">Estudar o que errei</button><button class="btn ghost" id="voltar">Voltar ao início</button></div></section>`;
+  const msg = c===t?'Gabaritou! Isso é nível bolsa!': pct>=70?'Mandou muito bem! Faltou pouquinho.': pct>=50?'Bom treino! Amanhã tem mais.':'Treino é para isso: agora a gente sabe o que estudar.';
+  const sim=run.tipo==='simulado';
+  const gab = sim && erradas.length ? `<div style="display:flex;flex-direction:column;gap:10px;text-align:left;width:100%"><h3>Correção das que você errou</h3>${erradas.map(o=>`<div class="feedback no"><span class="muted" style="font-size:13px">Questão ${o.i+1} · ${SKILLS[kid][o.q.skill].nome}</span><b style="font-size:16px">${esc(o.q.q)}</b><span>Você marcou: ${esc(o.q.options[run.resp[o.i]])} · Certa: <strong>${esc(o.q.options[o.q.a])}</strong></span><span>${esc(o.q.ex)}</span></div>`).join('')}</div>` : '';
+  return `<section class="card" style="align-items:center;text-align:center">
+    <p class="muted">${sim?`Simulado da prova · ${mmss(run.dur||0)}`: run.tipo==='pratica'?`Prática de ${SKILLS[kid][run.qs[0].skill].nome}`:'Resultado de hoje'}</p>
+    <div class="big">${c}<span class="muted" style="font-size:28px"> / ${t}</span></div>
+    <div class="stars">${[0,1,2].map(i=>estrela(i<st,36)).join('')}</div>
+    <h2>${msg}</h2>
+    ${errSk.length?`<p class="muted">Vale dar uma olhada em: ${errSk.map(s=>SKILLS[kid][s].nome).join(', ')}.</p>`:''}
+    <div class="row" style="justify-content:center">${erradas.length?'<button class="btn" id="refazer">Refazer as que errei</button>':''}<button class="btn ${erradas.length?'ghost':''}" id="estudar-erros">Estudar o que errei</button><button class="btn ghost" id="again">${sim||run.tipo==='pratica'?'Voltar ao início':'Fazer outro treino'}</button></div>
+    ${gab}
+  </section>`;
+}
+
+function barras(k){
+  const m=maestria(k);
+  return Object.entries(SKILLS[k]).map(([sk,s])=>({sk,s,v:m[sk]})).sort((a,b)=>(a.v.n<3?.55:a.v.m)-(b.v.n<3?.55:b.v.m)).map(({sk,s,v})=>{ const nv=nivel(v); const pct=v.n?Math.round(100*v.c/v.wn):0;
+    const col = v.n<3?'var(--line)': v.m<.5?'var(--bad)': v.m<.75?'var(--gold)':'var(--good)';
+    return `<div class="skill"><span>${s.nome} <span class="muted" style="font-size:13px">· ${s.mat?'Mat':'Port'}</span></span><span class="bar"><i style="width:${v.n?Math.max(6,pct):0}%;background:${col}"></i></span><span class="badge ${nv.c}">${v.n?pct+'%':'—'}</span></div>`; }).join('');
+}
+
+function grafico(k){
+  const dias=[]; const d=new Date(); for(let i=13;i>=0;i--){ const x=new Date(d); x.setDate(d.getDate()-i); dias.push(x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')); }
+  const W=640,H=170,L=34,B=26,T=12; const bw=(W-L-8)/14;
+  const dados=dias.map(dd=>{ const it=sessions.filter(s=>s.kid===k&&s.date===dd).flatMap(s=>s.items); return it.length? Math.round(100*it.filter(i=>i.ok).length/it.length):null; });
+  const y=v=>T+(H-T-B)*(1-v/100);
+  let g=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Acertos por dia nas últimas duas semanas">`;
+  for(const v of [0,50,100]) g+=`<line x1="${L}" x2="${W-4}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="var(--muted)">${v}%</text>`;
+  dados.forEach((v,i)=>{ const x=L+4+i*bw; if(v!=null) g+=`<rect x="${x}" y="${y(v)}" width="${bw-6}" height="${y(0)-y(v)}" rx="4" fill="var(--accent)"/><text x="${x+(bw-6)/2}" y="${y(v)-4}" font-size="10" text-anchor="middle" fill="var(--ink)">${v}</text>`; else g+=`<rect x="${x}" y="${y(0)-3}" width="${bw-6}" height="3" rx="1.5" fill="var(--line)"/>`;
+    if(i%2===1||i===13) g+=`<text x="${x+(bw-6)/2}" y="${H-8}" font-size="10" text-anchor="middle" fill="var(--muted)">${dias[i].slice(8)}/${dias[i].slice(5,7)}</text>`; });
+  return g+'</svg>';
+}
+
+function telaEvolucao(k, curta){
+  const nS=sessions.filter(s=>s.kid===k).length, am=acerto(k,true), ap=acerto(k,false);
+  if(!nS) return `<section class="card"><h3>${curta?'Sua trilha':'Evolução de '+KIDS[k].nome}</h3><p class="muted">Ainda não tem treino. Quando ${KIDS[k].nome} fizer o primeiro, aparecem aqui as matérias que já estão fortes e as que precisam de mais treino.</p></section>`;
+  return `<section class="card">
+    <div class="row" style="justify-content:space-between"><h3>${curta?'Sua trilha':'Evolução de '+KIDS[k].nome}</h3><div class="row"><span class="pill">Matemática ${am??'—'}%</span><span class="pill">Português ${ap??'—'}%</span><span class="pill">${nS} ${nS===1?'treino':'treinos'}</span></div></div>
+    ${curta?'':grafico(k)}
+    <div class="skills">${barras(k)}</div>
+    <p class="note">A porcentagem usa as últimas 12 respostas de cada assunto. Vermelho: treinar mais. Amarelo: quase lá. Verde: dominado.</p>
+  </section>`;
+}
+
+/* Assuntos que pedem conteúdo extra: errou nos últimos 14 dias ou está com domínio baixo. */
+function precisaReforco(k){
+  const m=maestria(k), hoje=today(), out=new Set();
+  for(const sk of Object.keys(SKILLS[k])){ const l=itemsDe(k).filter(i=>i.skill===sk).slice(-8); if(l.some(i=>!i.ok && diasEntre(i.date,hoje)<=14) || (m[sk].n>=3 && m[sk].m<.6)) out.add(sk); }
+  return out;
+}
+function telaEstudar(focoSk){
+  const f=new Set(focoSk||foco(kid,3)), pr=precisaReforco(kid); (focoSk||[]).forEach(s=>pr.add(s));
+  const ordem=[...Object.keys(LICOES[kid])].sort((a,b)=>((f.has(b)?2:0)+(pr.has(b)?1:0))-((f.has(a)?2:0)+(pr.has(a)?1:0)));
+  return `<section class="card"><h2>Para estudar</h2><p class="muted">Os assuntos com borda colorida são o foco agora. Leia o resumo, abra a "Explicação completa" para ver o passo a passo e os exemplos, resolva o desafio no caderno e depois pratique só aquele assunto. Assunto que você errou há pouco ganha um quadro extra com outro jeito de explicar.</p></section>
+  <div class="grid2">${ordem.map(sk=>{ const [t,txt,ex,dica]=LICOES[kid][sk]; const D=DET[kid][sk]; return `<article class="lesson ${f.has(sk)?'focus':''}"><span class="tag" style="align-self:flex-start">${SKILLS[kid][sk].mat?'Matemática':'Português'} · ${SKILLS[kid][sk].nome}</span><h3>${esc(t)}</h3><p>${esc(txt)}</p><div class="ex">${esc(ex)}</div><p class="dica">Dica: ${esc(dica)}</p>
+    ${D?`<details class="mais" id="det-${sk}"><summary>Explicação completa</summary>
+      <h4>Passo a passo</h4><ol>${D.p.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
+      <h4>Exemplos resolvidos</h4>${D.e.map(([q,r])=>`<div class="ex"><strong>${esc(q)}</strong><br>${esc(r)}</div>`).join('')}
+      <h4>Cuidado com estes erros</h4><ul>${D.x.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+      <h4>Desafio</h4><p>${esc(D.d)}</p><p class="dica">Resolva no caderno e mostre para o papai ou para a mamãe.</p>
+    </details>`:''}
+    ${(()=>{ const X=DET2[kid][sk]; if(!X) return ''; return `${pr.has(sk)?`<div class="extra" id="extra-${sk}"><span class="tag ref" style="align-self:flex-start">Você errou este assunto há pouco: aqui vai mais</span>
+      <h4>Outro jeito de entender</h4><p>${esc(X.j)}</p>
+      <h4>Mais exemplos resolvidos</h4>${X.e.map(([q,r])=>`<div class="ex"><strong>${esc(q)}</strong><br>${esc(r)}</div>`).join('')}</div>`:''}
+      <p class="links">Para pesquisar com o papai ou a mamãe: ${refLinks(X.r).map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(n.split(' (')[0])}</a>`).join(' · ')}</p>`; })()}
+    <button class="btn ghost pratica" data-sk="${sk}">Praticar este assunto (5 questões)</button></article>`; }).join('')}</div>`;
+}
+
+function tabelaDias(k){
+  const ss=sessions.filter(s=>s.kid===k), dias=[...new Set(ss.map(s=>s.date))].sort().reverse().slice(0,10);
+  if(!dias.length) return '';
+  const pc=it=>it.length?Math.round(100*it.filter(i=>i.ok).length/it.length)+'%':'';
+  const grp=(S,t)=>{ const g=S.filter(s=>(s.tipo||'treino')===t), it=g.flatMap(s=>s.items); return g.length?`${g.length} · ${it.length} q · ${pc(it)}`:'—'; };
+  const segQ=S=>{ const it=S.flatMap(s=>s.items), ct=it.filter(i=>i.t!=null); if(ct.length) return Math.round(ct.reduce((a,i)=>a+i.t,0)/ct.length)+' s'; return it.length?Math.round(S.reduce((a,s)=>a+(s.dur||0),0)/it.length)+' s*':'—'; };
+  const rap=S=>{ const ct=S.flatMap(s=>s.items).filter(i=>i.t!=null); return ct.length?Math.round(100*ct.filter(i=>i.r).length/ct.length)+'%':'—'; };
+  const linhas=dias.map(d=>{ const S=ss.filter(s=>s.date===d), tot=S.reduce((a,s)=>a+(s.dur||0),0), par=S.filter(s=>s.parcial).length;
+    return `<tr><td>${d.slice(8)}/${d.slice(5,7)}</td><td>${grp(S,'treino')}</td><td>${grp(S,'pratica')}</td><td>${grp(S,'simulado')}</td><td>${Math.round(tot/60)} min</td><td>${segQ(S)}</td><td>${rap(S)}</td><td>${par||'—'}</td></tr>`; }).join('');
+  const sem=ss.filter(s=>diasEntre(s.date,today())<7), itS=sem.flatMap(s=>s.items);
+  return `<h3>Treino e prática por dia</h3>
+    <p>Últimos 7 dias: <strong>${sem.filter(s=>(s.tipo||'treino')==='treino').length}</strong> treinos e <strong>${sem.filter(s=>s.tipo==='pratica').length}</strong> práticas · ${itS.length} questões · ${Math.round(sem.reduce((a,s)=>a+(s.dur||0),0)/60)} min no total · ${segQ(sem)} por questão · respostas rápidas demais: ${rap(sem)}.</p>
+    <div class="tblw"><table class="tbl"><thead><tr><th>Dia</th><th>Treinos (qtd · questões · acerto)</th><th>Práticas</th><th>Simulado</th><th>Tempo</th><th>Seg/questão</th><th>Rápidas demais</th><th>Saiu no meio</th></tr></thead><tbody>${linhas}</tbody></table></div>
+    <p class="note">"Rápidas demais" = respondeu em menos de 4 segundos (7 com texto) e precisou confirmar. Saiu no meio = trocou de aba, saiu ou fechou antes de terminar: o que respondeu ficou salvo. * média estimada pela duração do treino (antes de medir questão por questão).</p>`;
+}
+function telaPainel(){
+  const bloco=k=>{ const K=KIDS[k], nS=sessions.filter(s=>s.kid===k).length, ult=sessions.filter(s=>s.kid===k).sort((a,b)=>b.ts-a.ts)[0];
+    const f=foco(k,3), m=maestria(k);
+    return `<section class="card">
+      <div class="row" style="justify-content:space-between"><h2 style="color:var(--${k==='maia'?'maia':'jaq'})">${K.nome}</h2>
+      ${k==='maia'?`<div class="seg" role="group" aria-label="Série da Maya em 2027"><button id="serie4" data-serie="4" aria-pressed="${cfg.maiaSerie===4}">4º ano</button><button id="serie5" data-serie="5" aria-pressed="${cfg.maiaSerie===5}">5º ano</button></div>`:'<span class="pill">7º ano em 2027</span>'}</div>
+      <div class="row"><span class="pill">${nS} ${nS===1?'treino':'treinos'}</span><span class="pill">${sequencia(k)} ${sequencia(k)===1?'dia seguido':'dias seguidos'}</span><span class="pill">Mat ${acerto(k,true)??'—'}%</span><span class="pill">Port ${acerto(k,false)??'—'}%</span>${ult?`<span class="pill">Último: ${ult.date.slice(8)}/${ult.date.slice(5,7)}</span>`:''}</div>
+      ${(()=>{ const rv=devidos(k).length, sims=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts).slice(0,5); return `<p>Reforço pendente: <strong>${rv}</strong> ${rv===1?'questão':'questões'} que ${K.nome} errou e que voltam nos próximos treinos.</p>${sims.length?`<p>Simulados: ${sims.map(x=>`${x.date.slice(8)}/${x.date.slice(5,7)} → <strong>${x.score}/${x.items.length}</strong> (${Math.round(100*x.score/x.items.length)}%)`).join(' · ')}</p>`:'<p class="muted">Nenhum simulado completo ainda.</p>'}`; })()}
+      ${k==='maia'?`<p>Troco em degraus: Maya está no <strong>degrau ${degrauTroco()} de 3</strong> (1 = reais inteiros · 2 = ,00 e ,50 · 3 = centavos quebrados). Sobe com 4 acertos seguidos.</p>`:''}
+      ${tabelaDias(k)}
+      <h3>Foco agora</h3>
+      <ul class="focuslist">${f.map(sk=>{ const v=m[sk]; return `<li><span>${SKILLS[k][sk].nome} <span class="muted" style="font-size:13px">· ${SKILLS[k][sk].mat?'Matemática':'Português'}</span></span><span class="badge ${nivel(v).c}">${v.n?Math.round(100*v.c/v.wn)+'% em '+v.n:'ainda não treinou'}</span></li>`; }).join('')}</ul>
+      ${nS?grafico(k):''}
+      <div class="skills">${barras(k)}</div>
+    </section>`; };
+  return `<section class="card"><p>Como funciona o reforço: o treino diário escolhe mais questões dos assuntos fracos, e toda questão errada volta depois de 1 dia; se acertar, volta de novo depois de 3 dias; acertando de novo, conta como fixada. O simulado semanal mede como estão no formato da prova. Na prova de bolsa do Objetivo e do Etapa caem Português e Matemática, com o conteúdo da série que eles estão terminando.</p><p class="note">Ainda faltam confirmar com as escolas a data da prova e o edital. Quando chegarem, os treinos são ajustados.</p></section>${bloco('jaquinho')}${bloco('maia')}
+  <section class="card"><h3>Senha do papai</h3><p class="muted">${cfg.papaiHash?'Senha personalizada ativa.':'Ainda é a senha provisória "papai". Troque por uma que as crianças não saibam.'} A troca vale para todos os aparelhos.</p>
+  <div class="row"><input id="ns1" type="password" placeholder="Nova senha" autocomplete="new-password" style="font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"><input id="ns2" type="password" placeholder="Repita a senha" autocomplete="new-password" style="font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"><button class="btn ghost" id="trocasenha">Trocar senha</button></div><p class="note" id="msgsenha"></p></section>`;
+}
+
+/* ================= eventos ================= */
+let tick=null;
+function ligar(){
+  clearInterval(tick); if(run && run.tipo==='simulado' && !run.fim) tick=setInterval(()=>{ const el=$('#timer'); if(el) el.textContent=mmss(Math.round((Date.now()-run.t0)/1000)); },1000);
+  $('#start')?.addEventListener('click',()=>novaRun('treino'));
+  document.querySelectorAll('.pratica').forEach(b=>b.addEventListener('click',()=>{ iniciarRun(montarPratica(kid,b.dataset.sk),'pratica'); view='treino'; render(); window.scrollTo({top:0}); }));
+  $('#simulado')?.addEventListener('click',()=>novaRun('simulado'));
+  document.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>{
+    if(run.resp[run.i]!=null) return; const j=+b.dataset.j, dt=(Date.now()-run.qT0)/1000;
+    if(dt<limPressa(run.qs[run.i]) && run.pend!==j){ run.pend=j; run.rap[run.i]=true; render(); return; }   // freio de pressa: pede para confirmar
+    run.resp[run.i]=j; run.tq[run.i]=Math.round(dt*10)/10; run.pend=null; render(); $('#next')?.focus();
+  }));
+  $('#next')?.addEventListener('click',async()=>{
+    if(run.i+1<run.qs.length){ run.i++; run.qT0=Date.now(); run.pend=null; render(); window.scrollTo({top:0}); return; }
+    run.dur=Math.round((Date.now()-run.t0)/1000);
+    if(run.tipo==='refazer'){ run.fim=true; render(); return; }
+    const s=sessaoDoRun(false); run.fim=true; render(); await saveSession(s);
+  });
+  $('#again')?.addEventListener('click',()=>{ if(run && (run.tipo==='simulado'||run.tipo==='pratica')){ run=null; render(); } else novaRun('treino'); });
+  $('#voltar')?.addEventListener('click',()=>{ run=null; render(); });
+  $('#refazer')?.addEventListener('click',()=>{ const qs=run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>{ const correta=q.options[q.a]; const sh=shuffle(q.options); return {...q,options:sh,a:sh.indexOf(correta),reforco:false}; }); iniciarRun(qs,'refazer'); render(); window.scrollTo({top:0}); });
+  $('#estudar-erros')?.addEventListener('click',()=>{ const e=[...new Set(run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>q.skill))]; run=null; view='estudar'; render(); $('#view').innerHTML=telaEstudar(e.length?e:null); window.scrollTo({top:0,behavior:'smooth'}); });
+  document.querySelectorAll('[data-serie]').forEach(b=>b.addEventListener('click',()=>{ cfg.maiaSerie=+b.dataset.serie; saveCfg(); render(); }));
+  $('#trocasenha')?.addEventListener('click',()=>{ const a=$('#ns1').value.trim(), b=$('#ns2').value.trim(), msg=$('#msgsenha');
+    if(a.length<4){ msg.textContent='Use pelo menos 4 caracteres.'; return; } if(a!==b){ msg.textContent='As duas senhas não estão iguais.'; return; }
+    cfg.papaiHash=hashSenha('papai',a); saveCfg({papaiHash:cfg.papaiHash}); render(); $('#msgsenha').textContent='Senha trocada. Na próxima vez, entre com a nova.'; });
+}
+document.querySelectorAll('.kid').forEach(b=>b.addEventListener('click',()=>setKid(b.dataset.kid)));
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+$('#sair').addEventListener('click',sair);
+if(user==='papai') view='painel';
+render(); note(); const dbPronto=initDb();
+</script>
+
+</body>
+</html>
