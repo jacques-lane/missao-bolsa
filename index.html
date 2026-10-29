@@ -129,6 +129,14 @@ table.tbl th,table.tbl td{border-bottom:1px solid var(--line);padding:6px 8px;te
 .erro{color:var(--bad);font-weight:700;min-height:1.2em}
 .userbox{display:flex;gap:8px;align-items:center}
 .mini{font:700 14px var(--font-body);border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.medalhas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.medalha{border:2px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;font-size:13px;opacity:.75}
+.medalha b{font-size:15px} .medalha.on{border-color:var(--gold);opacity:1;background:color-mix(in srgb,var(--gold) 10%,var(--surface))}
+.festa{border:2px solid var(--gold);border-radius:12px;padding:10px 14px;background:color-mix(in srgb,var(--gold) 12%,var(--surface));font-weight:700;width:100%}
+.confete{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50}
+.confete i{position:absolute;top:-14px;width:8px;height:13px;border-radius:2px;animation:cai linear forwards}
+@keyframes cai{to{top:105vh;transform:rotate(720deg)}}
+@media (max-width:700px){.medalhas{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.grid2{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.skill{grid-template-columns:minmax(0,1fr) 70px 48px}h1{font-size:25px}.qtext{font-size:18px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -892,7 +900,7 @@ const limPressa=q=>q.texto?7:4;   // segundos mínimos antes de responder sem co
 /* ================= salvar também o que foi respondido no meio ================= */
 function respondidas(r){ return r ? r.qs.map((q,i)=>({q,i})).filter(o=>r.resp[o.i]!=null) : []; }
 function sessaoDoRun(parcial){
-  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; return o; });
+  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; if(q.gemea) o.g=1; if(q.etapa) o.e=q.etapa; return o; });
   const s={id:run.id, kid:run.kid, tipo:run.tipo, date:today(), ts, serie:serieDe(run.kid), dur:Math.round((ts-run.t0)/1000), items:its, score:its.filter(i=>i.ok).length};
   if(parcial) s.parcial=true;
   return s;
@@ -901,6 +909,81 @@ function sessaoDoRun(parcial){
 function salvarParcial(){
   if(!run || run.fim || run.tipo==='refazer' || !respondidas(run).length) return false;
   upsertSession(sessaoDoRun(true)); enviarFila(); return true;
+}
+
+/* ================= v11 (29/10) — textos longos da Maya (SEMPRE acrescentar no fim) ================= */
+Object.assign(TX,{
+  m8:'No sábado, a Maya ajudou a mamãe na loja. Uma senhora queria um buquê de rosas para a neta, mas tinha pouco dinheiro. A mamãe pensou um pouco, tirou duas rosas do buquê e colocou margaridas no lugar. — Assim fica mais barato e continua lindo — explicou. A senhora pagou com uma nota de cinquenta reais, e a Maya fez a conta do troco no caderninho antes de entregar. Conferiu duas vezes. Quando a cliente saiu, a mamãe deu uma piscadinha: — Viu? Loja não é só vender. É resolver o problema da pessoa. A Maya passou o resto da tarde inventando arranjos baratos e bonitos e já planejava gravar um reels com eles.',
+  m9:'Quando são jovens, os girassóis acompanham o Sol. De manhã, ficam virados para o leste e, ao longo do dia, vão girando até o oeste. À noite, voltam devagar para o leste, prontos para o dia seguinte. Esse movimento ajuda a planta a crescer mais rápido. Quando a flor fica adulta, o caule endurece e ela para de girar, ficando sempre virada para o leste. Os cientistas descobriram que isso tem uma vantagem: a flor esquenta mais cedo com o sol da manhã e recebe mais visitas de abelhas, que preferem flores quentinhas.'
+});
+PTX.maia.interpretacao.push(
+  ['Qual era o problema da senhora?',['Queria um buquê, mas tinha pouco dinheiro','Não gostava de rosas','Estava atrasada para uma festa','Não sabia o caminho da loja'],'"Queria um buquê de rosas para a neta, mas tinha pouco dinheiro." O "mas" mostra o problema.','m8'],
+  ['O que a mamãe fez para resolver o problema?',['Trocou duas rosas por margaridas','Deu o buquê de graça','Aumentou o preço do buquê','Mandou a senhora voltar outro dia'],'Ela tirou duas rosas e colocou margaridas: o buquê ficou mais barato e continuou bonito.','m8'],
+  ['Por que a Maya conferiu a conta duas vezes?',['Para não errar o troco da cliente','Porque gostava de escrever no caderninho','Porque a calculadora quebrou','Porque a mamãe brigou com ela'],'O texto não diz com essas palavras: é preciso deduzir. Ela queria entregar o troco certo.','m8'],
+  ['Com a frase "Loja não é só vender", a mamãe quis dizer que:',['É preciso ajudar o cliente a resolver o que ele precisa','Vender é proibido','A loja vai fechar','Só o dinheiro importa'],'Ela completa: "É resolver o problema da pessoa."','m8'],
+  ['Para que lado fica virado o girassol adulto?',['Para o leste','Para o oeste','Para o norte','Para baixo'],'"Ficando sempre virada para o leste."','m9'],
+  ['Por que o girassol adulto para de girar?',['Porque o caule endurece','Porque perde as pétalas','Porque fica sem água','Porque o Sol para de nascer'],'"Quando a flor fica adulta, o caule endurece e ela para de girar."','m9'],
+  ['Que vantagem a flor adulta tem ao ficar virada para o leste?',['Recebe mais visitas de abelhas','Fica mais alta','Muda de cor','Não precisa de água'],'Ela esquenta mais cedo, e as abelhas preferem flores quentinhas.','m9'],
+  ['Esse texto foi escrito principalmente para:',['Informar sobre um fato da natureza','Contar uma história inventada','Vender sementes de girassol','Ensinar uma receita'],'É um texto informativo: explica como os girassóis se movem e por quê.','m9']
+);
+
+/* ================= v11 — soma de frações em 3 etapas (Jaquinho, até ficar verde) ================= */
+const emEtapas=()=>{ const m=maestria('jaquinho').fracoes_soma; return m.n<3 || m.m<.75; };
+const multiplosAte=(n,lim)=>{ const r=[]; for(let x=n;x<=lim;x+=n) r.push(x); return r.join(', '); };
+function etapasFracoes(){
+  let b,d,m; do{ b=rnd(2,10); d=rnd(2,10); m=lcm(b,d); }while(b===d || m>40);
+  const a=rnd(1,b-1), c=rnd(1,d-1), x=a*m/b, y=c*m/d, val=(n,dd)=>n/dd, certo=frac(x+y,m);
+  const conta=`${a}/${b} + ${c}/${d}`;
+  const e1={ q:`Etapa 1 de 3 — Para somar ${conta}, primeiro precisamos de um denominador comum. Qual é o MMC de ${b} e ${d}?`, ...mc(m,[b*d,b+d,Math.max(b,d),m*2]),
+    ex:`Múltiplos de ${b}: ${multiplosAte(b,m)}. Múltiplos de ${d}: ${multiplosAte(d,m)}. O primeiro em comum é ${m}.` };
+  const e2={ q:`Etapa 2 de 3 — Com o denominador ${m}, como fica ${conta}?`, ...mc(`${x}/${m} + ${y}/${m}`,[`${a}/${m} + ${c}/${m}`,`${a*(m/d)}/${m} + ${c*(m/b)}/${m}`,`${x}/${m} + ${c}/${m}`,`${a+m/b}/${m} + ${c+m/d}/${m}`],k=>`${x+k}/${m} + ${y+(k%2)}/${m}`),
+    ex:`${m} ÷ ${b} = ${m/b}, então ${a}/${b} = ${a}×${m/b} / ${m} = ${x}/${m}. ${m} ÷ ${d} = ${m/d}, então ${c}/${d} = ${y}/${m}. O que multiplica embaixo, multiplica em cima.` };
+  const erradas=[frac(x+y,2*m),frac(a+c,b+d),frac(x+y+1,m),frac(x+y,m+1),frac(Math.max(1,x+y-1),m)].filter(w=>{ const [n,dd]=(w+'/1').split('/').map(Number); return Math.abs(val(n,dd)-val(x+y,m))>1e-9; });
+  const e3={ q:`Etapa 3 de 3 — Agora é só somar: ${x}/${m} + ${y}/${m} = ? (simplifique se der)`, ...mc(certo,erradas,k=>frac(x+y+k+1,m)),
+    ex:`Com o mesmo denominador, soma só os de cima e mantém o de baixo: ${x} + ${y} = ${x+y} → ${x+y}/${m}${certo!==(x+y)+'/'+m?' = '+certo+' (simplificado)':''}.` };
+  return [e1,e2,e3].map((g,i)=>({skill:'fracoes_soma',qid:'fracoes_soma-e'+(i+1),q:g.q,options:g.options,a:g.a,ex:g.ex,etapa:i+1}));
+}
+
+/* ================= v11 — medalhas (constância e domínio, nunca nota) ================= */
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function melhorSeq(k){ const ds=[...new Set(sessions.filter(s=>s.kid===k).map(s=>s.date))].sort(); let best=0,cur=0,prev=null; for(const d of ds){ cur=(prev && diasEntre(prev,d)===1)?cur+1:1; best=Math.max(best,cur); prev=d; } return best; }
+function medalhas(k){
+  const nq=sessions.filter(s=>s.kid===k).reduce((a,s)=>a+s.items.length,0), sq=melhorSeq(k);
+  if(k==='jaquinho'){ const m=maestria(k).fracoes_soma; return {titulo:'Afine o violino: 4 cordas', fim:'Violino afinado!', lista:[
+    {id:'sol',nome:'Corda Sol',regra:'3 dias seguidos de treino',ok:sq>=3,prog:`${Math.min(sq,3)}/3 dias`},
+    {id:'re',nome:'Corda Ré',regra:'7 dias seguidos de treino',ok:sq>=7,prog:`${Math.min(sq,7)}/7 dias`},
+    {id:'la',nome:'Corda Lá',regra:'500 questões respondidas',ok:nq>=500,prog:`${Math.min(nq,500)}/500`},
+    {id:'mi',nome:'Corda Mi',regra:'Soma de frações dominada (verde)',ok:m.n>=3&&m.m>=.75,prog:m.n?`${Math.round(100*m.c/m.wn)}% (precisa ficar verde)`:'ainda não treinou'}]}; }
+  const nv=degrauTroco(); return {titulo:'Monte seu kit de make: 4 peças', fim:'Kit completo!', lista:[
+    {id:'batom',nome:'Batom',regra:'3 dias seguidos de treino',ok:sq>=3,prog:`${Math.min(sq,3)}/3 dias`},
+    {id:'esmalte',nome:'Esmalte',regra:'7 dias seguidos de treino',ok:sq>=7,prog:`${Math.min(sq,7)}/7 dias`},
+    {id:'sombra',nome:'Sombra',regra:'300 questões respondidas',ok:nq>=300,prog:`${Math.min(nq,300)}/300`},
+    {id:'glitter',nome:'Glitter',regra:'Chegar ao degrau 3 do troco',ok:nv>=3,prog:`degrau ${nv} de 3`}]};
+}
+const medalhasOk=k=>medalhas(k).lista.filter(x=>x.ok).map(x=>x.id);
+function cardMedalhas(k){
+  const M=medalhas(k), n=M.lista.filter(x=>x.ok).length;
+  return `<section class="card"><div class="row" style="justify-content:space-between"><h3>${M.titulo}</h3><span class="pill">${n===4?M.fim:`${n} de 4`}</span></div>
+  <div class="medalhas">${M.lista.map(x=>`<div class="medalha ${x.ok?'on':''}">${estrela(x.ok,26)}<b>${x.nome}</b><span>${x.regra}</span><span class="muted">${x.ok?'Conquistada!':'Falta: '+x.prog}</span></div>`).join('')}</div></section>`;
+}
+
+/* ================= v11 — meta da família (os dois juntos, sem competição) ================= */
+function semanaInicio(){ const d=new Date(); d.setDate(d.getDate()-((d.getDay()+6)%7)); return ymd(d); }
+function metaFamilia(){ const ini=semanaInicio(); return { n:sessions.filter(s=>s.date>=ini).reduce((a,s)=>a+s.items.length,0), meta:Number(cfg.metaSemana)||500, premio:cfg.premioSemana||'pizza em família' }; }
+function cardMeta(){
+  const M=metaFamilia(), pct=Math.min(100,Math.round(100*M.n/M.meta));
+  return `<section class="card"><div class="row" style="justify-content:space-between"><h3>Meta da família da semana</h3><span class="pill">${M.n} de ${M.meta} questões</span></div>
+  <div class="progress" aria-hidden="true"><i style="width:${pct}%"></i></div>
+  <p class="muted">${M.n>=M.meta?`Meta batida! Prêmio liberado: <strong>${esc(M.premio)}</strong>.`:`Maya e Jaquinho juntos, de segunda a domingo. Prêmio: <strong>${esc(M.premio)}</strong>. Toda questão conta: treino, prática e simulado.`}</p></section>`;
+}
+
+/* ================= v11 — comemoração ================= */
+function confete(){
+  try{ if(matchMedia('(prefers-reduced-motion: reduce)').matches) return; }catch(e){}
+  const box=document.createElement('div'); box.className='confete';
+  const cores=['var(--accent)','var(--gold)','var(--good)','var(--maia)','var(--jaq)'];
+  for(let i=0;i<80;i++){ const p=document.createElement('i'); p.style.left=Math.random()*100+'%'; p.style.background=cores[i%cores.length]; p.style.animationDuration=(1.6+Math.random()*1.4)+'s'; p.style.animationDelay=(Math.random()*.4)+'s'; p.style.transform=`rotate(${Math.random()*360}deg)`; box.appendChild(p); }
+  document.body.appendChild(box); setTimeout(()=>box.remove(),3600);
 }
 
 /* ================= estado e armazenamento ================= */
@@ -929,6 +1012,8 @@ async function initDb(){
     if(run && run.resp.some(x=>x!=null)) sessions = sessions.filter(x=>x.id!==run.id).concat(sessoesRunAtual());
     if(r.config && r.config.maiaSerie) cfg.maiaSerie = Number(r.config.maiaSerie);
     if(r.config && r.config.papaiHash) cfg.papaiHash = String(r.config.papaiHash);
+    if(r.config && r.config.metaSemana) cfg.metaSemana = Number(r.config.metaSemana);
+    if(r.config && r.config.premioSemana) cfg.premioSemana = String(r.config.premioSemana);
     storeMode='db'; saveLocal();
   }catch(e){ storeMode='offline'; }
   note(); if(!run) render(); enviarFila();
@@ -968,7 +1053,7 @@ const serieDe = k => k==='maia' ? (cfg.maiaSerie||4) : 7;
 function itemsDe(k){ return sessions.filter(s=>s.kid===k).sort((a,b)=>a.ts-b.ts).flatMap(s=>s.items.map(i=>({...i,date:s.date}))); }
 function maestria(k){
   /* Questão de Português repetida (já respondida antes) vale meio ponto: decorar a resposta não infla o domínio. */
-  const visto=new Set(), it=itemsDe(k).map(i=>{ let w=1; if(!SKILLS[k][i.skill]?.mat){ if(visto.has(i.qid)) w=.5; visto.add(i.qid); } return {...i,w}; }), out={};
+  const visto=new Set(), it=itemsDe(k).filter(i=>!i.e).map(i=>{ let w=1; if(!SKILLS[k][i.skill]?.mat){ if(visto.has(i.qid)) w=.5; visto.add(i.qid); } return {...i,w}; }), out={};
   for(const sk of Object.keys(SKILLS[k])){ const l=it.filter(i=>i.skill===sk).slice(-12); const c=l.reduce((a,i)=>a+(i.ok?i.w:0),0), wn=l.reduce((a,i)=>a+i.w,0); out[sk]={n:l.length,c,wn,m:(c+1)/(wn+2)}; }
   return out;
 }
@@ -979,7 +1064,7 @@ function sequencia(k){
   for(;;){ const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); if(dias.has(key)){ n++; d.setDate(d.getDate()-1);} else break; }
   return n;
 }
-function acerto(k,mat){ const it=itemsDe(k).filter(i=>!!SKILLS[k][i.skill]?.mat===mat).slice(-40); return it.length? Math.round(100*it.filter(i=>i.ok).length/it.length) : null; }
+function acerto(k,mat){ const it=itemsDe(k).filter(i=>!i.e && !!SKILLS[k][i.skill]?.mat===mat).slice(-40); return it.length? Math.round(100*it.filter(i=>i.ok).length/it.length) : null; }
 function foco(k,n=3){ const m=maestria(k); return Object.entries(m).sort((a,b)=>(a[1].n<3?.55:a[1].m)-(b[1].n<3?.55:b[1].m)).slice(0,n).map(([sk])=>sk); }
 
 /* ================= montagem do treino ================= */
@@ -1017,16 +1102,20 @@ function montarTreino(k,tipo='treino'){
   const mats=skills.filter(s=>SKILLS[k][s].mat), pts=skills.filter(s=>!SKILLS[k][s].mat);
   const escolhidas=[];
   for(const t of [...Array(fMat).fill('mat'),...Array(fPt).fill('pt')]){ let pool=(t==='mat'?mats:pts).filter(s=>(cont[s]||0)<lim); if(!pool.length) pool=t==='mat'?mats:pts; const sk=sortear(pool); cont[sk]=(cont[sk]||0)+1; escolhidas.push(sk); }
+  /* Maya com Português acima de 90%: pelo menos 2 das 5 de Português são de interpretação (textos maiores, como na prova). */
+  if(k==='maia' && tipo==='treino' && (acerto(k,false)??0)>=90){ let ni=escolhidas.filter(s=>s==='interpretacao').length; for(let i=0;i<escolhidas.length && ni<2;i++){ if(!SKILLS[k][escolhidas[i]].mat && escolhidas[i]!=='interpretacao'){ escolhidas[i]='interpretacao'; ni++; } } }
   for(const sk of escolhidas){
-    if(SKILLS[k][sk].mat) qs.push(questaoMat(k,sk,{}));
+    if(k==='jaquinho' && sk==='fracoes_soma' && tipo==='treino' && emEtapas()) qs.push({skill:sk,grupo:etapasFracoes()});
+    else if(SKILLS[k][sk].mat) qs.push(questaoMat(k,sk,{}));
     else{
       const o=escolherPT(k,B.lista.filter(o=>o.skill===sk && !usados.has(o.qid)),uv) || escolherPT(k,B.lista.filter(o=>!usados.has(o.qid)),uv);
       if(o){ usados.add(o.qid); qs.push(questaoPT(k,o,{})); }
     }
   }
-  return tipo==='simulado' ? qs.sort((a,b)=>(SKILLS[k][b.skill].mat?1:0)-(SKILLS[k][a.skill].mat?1:0)) : shuffle(qs);
+  return tipo==='simulado' ? qs.sort((a,b)=>(SKILLS[k][b.skill].mat?1:0)-(SKILLS[k][a.skill].mat?1:0)) : shuffle(qs).flatMap(q=>q.grupo||[q]);
 }
 function montarPratica(k,sk){
+  if(k==='jaquinho' && sk==='fracoes_soma' && emEtapas()) return [...etapasFracoes(),...Array.from({length:4},()=>questaoMat(k,sk,{}))];
   if(SKILLS[k][sk].mat) return Array.from({length:5},()=>questaoMat(k,sk,{}));
   const uv=ultimaVez(k);
   return shuffle(bancoPT(k).lista.filter(o=>o.skill===sk)).sort((a,b)=>uv(a.qid)-uv(b.qid)).slice(0,5).map(o=>questaoPT(k,o,{}));
@@ -1084,7 +1173,7 @@ function telaInicio(){
     <div class="hero">
       <div style="display:flex;flex-direction:column;gap:10px">
         <h2>${feitoHoje?'Treino de hoje feito! Quer mais um?':`${K.ola} Bora para a missão de hoje?`}</h2>
-        <p class="muted">10 questões: 5 de Matemática e 5 de Português. Leva uns 15 minutos.${rev?` Hoje voltam ${Math.min(rev,3)} ${Math.min(rev,3)===1?'questão':'questões'} de reforço, das que você errou antes.`:''}</p>
+        <p class="muted">10 questões: 5 de Matemática e 5 de Português. Leva uns 15 minutos. Errou uma? Vem logo uma questão gêmea, parecida, para fixar.${kid==='jaquinho'&&emEtapas()?' Soma de frações vem em 3 etapas (MMC, converter, somar) até ficar verde.':''}${rev?` Hoje voltam ${Math.min(rev,3)} ${Math.min(rev,3)===1?'questão':'questões'} de reforço, das que você errou antes.`:''}</p>
         <div class="stats"><span class="pill">${estrela(true,16)} ${seq} ${seq===1?'dia seguido':'dias seguidos'}</span><span class="pill">Foco: ${f.join(' e ')}</span>${rev?`<span class="pill">Reforço: ${rev}</span>`:''}</div>
       </div>
       <button class="btn" id="start">Começar treino</button>
@@ -1096,6 +1185,8 @@ function telaInicio(){
       <button class="btn ghost" id="simulado">Fazer simulado</button>
     </div>
   </section>
+  ${cardMedalhas(kid)}
+  ${cardMeta()}
   ${telaEvolucao(kid,true)}`;
 }
 
@@ -1106,10 +1197,10 @@ function telaQuestao(){
     if(resp==null && run.pend===j) cls='pend';
     return `<button class="opt ${cls}" id="opt-${j}" data-j="${j}" ${resp!=null?'disabled':''}><span class="l">${letras[j]}</span><span>${esc(o)}</span></button>`; }).join('');
   const pressa = resp==null && run.pend!=null ? `<div class="pressa" role="status" id="pressa">Opa, foi rápido demais! ${kid==='maia'?'Leu tudo com calma, linda?':'Leu o enunciado inteiro?'} Se tiver certeza, toque de novo na mesma resposta. Se não, troque.</div>` : '';
-  let fb=''; if(resp!=null && !sim){ const ok=resp===q.a; fb=`<div class="feedback ${ok?'ok':'no'}" role="status"><b>${esc(ok?pick(K.vivas):pick(K.forca))}</b><span>${esc(q.ex)}</span></div>`; }
+  let fb=''; if(resp!=null && !sim){ const ok=resp===q.a; fb=`<div class="feedback ${ok?'ok':'no'}" role="status"><b>${esc(ok?pick(K.vivas):pick(K.forca))}</b><span>${esc(q.ex)}</span>${q.temGemea?'<span><strong>Agora vem uma gêmea:</strong> uma questão parecida, para fixar o jeito certo.</span>':''}</div>`; }
   const titulo = sim ? 'Simulado' : run.tipo==='refazer' ? 'Refazendo' : run.tipo==='pratica' ? 'Praticando' : '';
   return `<section class="card">
-    <div class="qhead"><span class="row" style="gap:6px">${q.reforco?'<span class="tag ref">Reforço</span>':''}${titulo?`<span class="tag ref">${titulo}</span>`:''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${q.nv} de 3`:''}</span></span><span>${sim?`<span id="timer">${mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
+    <div class="qhead"><span class="row" style="gap:6px">${q.reforco?'<span class="tag ref">Reforço</span>':''}${q.gemea?'<span class="tag ref">Gêmea</span>':''}${q.etapa?`<span class="tag ref">Etapa ${q.etapa} de 3</span>`:''}${titulo?`<span class="tag ref">${titulo}</span>`:''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${q.nv} de 3`:''}</span></span><span>${sim?`<span id="timer">${mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
     <div class="progress" aria-hidden="true"><i style="width:${(run.i+(resp!=null?1:0))/run.qs.length*100}%"></i></div>
     ${q.texto?`<div class="texto">${esc(q.texto)}</div>`:''}
     <p class="qtext">${esc(q.q)}</p>
@@ -1128,6 +1219,7 @@ function telaFim(){
   const sim=run.tipo==='simulado';
   const gab = sim && erradas.length ? `<div style="display:flex;flex-direction:column;gap:10px;text-align:left;width:100%"><h3>Correção das que você errou</h3>${erradas.map(o=>`<div class="feedback no"><span class="muted" style="font-size:13px">Questão ${o.i+1} · ${SKILLS[kid][o.q.skill].nome}</span><b style="font-size:16px">${esc(o.q.q)}</b><span>Você marcou: ${esc(o.q.options[run.resp[o.i]])} · Certa: <strong>${esc(o.q.options[o.q.a])}</strong></span><span>${esc(o.q.ex)}</span></div>`).join('')}</div>` : '';
   return `<section class="card" style="align-items:center;text-align:center">
+    ${(run.festa||[]).map(f=>`<div class="festa">${esc(f)}</div>`).join('')}
     <p class="muted">${sim?`Simulado da prova · ${mmss(run.dur||0)}`: run.tipo==='pratica'?`Prática de ${SKILLS[kid][run.qs[0].skill].nome}`:'Resultado de hoje'}</p>
     <div class="big">${c}<span class="muted" style="font-size:28px"> / ${t}</span></div>
     <div class="stars">${[0,1,2].map(i=>estrela(i<st,36)).join('')}</div>
@@ -1216,6 +1308,8 @@ function telaPainel(){
       <div class="row"><span class="pill">${nS} ${nS===1?'treino':'treinos'}</span><span class="pill">${sequencia(k)} ${sequencia(k)===1?'dia seguido':'dias seguidos'}</span><span class="pill">Mat ${acerto(k,true)??'—'}%</span><span class="pill">Port ${acerto(k,false)??'—'}%</span>${ult?`<span class="pill">Último: ${ult.date.slice(8)}/${ult.date.slice(5,7)}</span>`:''}</div>
       ${(()=>{ const rv=devidos(k).length, sims=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts).slice(0,5); return `<p>Reforço pendente: <strong>${rv}</strong> ${rv===1?'questão':'questões'} que ${K.nome} errou e que voltam nos próximos treinos.</p>${sims.length?`<p>Simulados: ${sims.map(x=>`${x.date.slice(8)}/${x.date.slice(5,7)} → <strong>${x.score}/${x.items.length}</strong> (${Math.round(100*x.score/x.items.length)}%)`).join(' · ')}</p>`:'<p class="muted">Nenhum simulado completo ainda.</p>'}`; })()}
       ${k==='maia'?`<p>Troco em degraus: Maya está no <strong>degrau ${degrauTroco()} de 3</strong> (1 = reais inteiros · 2 = ,00 e ,50 · 3 = centavos quebrados). Sobe com 4 acertos seguidos.</p>`:''}
+      ${k==='jaquinho'?(()=>{ const it=itemsDe(k).filter(i=>i.e), nm=['MMC','converter','somar']; return `<p>Soma de frações ${emEtapas()?'<strong>em 3 etapas</strong> (até ficar verde)':'já dominada: voltou ao formato normal'}.${it.length?' Acerto por etapa: '+[1,2,3].map(e=>{ const l=it.filter(i=>i.e===e); return `${nm[e-1]} ${l.length?Math.round(100*l.filter(i=>i.ok).length/l.length)+'% ('+l.length+')':'—'}`; }).join(' · ')+'.':''}</p>`; })():''}
+      <p>Conquistas: ${medalhas(k).lista.map(x=>`${x.nome} ${x.ok?'✓':'('+x.prog+')'}`).join(' · ')}.</p>
       ${tabelaDias(k)}
       <h3>Foco agora</h3>
       <ul class="focuslist">${f.map(sk=>{ const v=m[sk]; return `<li><span>${SKILLS[k][sk].nome} <span class="muted" style="font-size:13px">· ${SKILLS[k][sk].mat?'Matemática':'Português'}</span></span><span class="badge ${nivel(v).c}">${v.n?Math.round(100*v.c/v.wn)+'% em '+v.n:'ainda não treinou'}</span></li>`; }).join('')}</ul>
@@ -1223,6 +1317,10 @@ function telaPainel(){
       <div class="skills">${barras(k)}</div>
     </section>`; };
   return `<section class="card"><p>Como funciona o reforço: o treino diário escolhe mais questões dos assuntos fracos, e toda questão errada volta depois de 1 dia; se acertar, volta de novo depois de 3 dias; acertando de novo, conta como fixada. O simulado semanal mede como estão no formato da prova. Na prova de bolsa do Objetivo e do Etapa caem Português e Matemática, com o conteúdo da série que eles estão terminando.</p><p class="note">Ainda faltam confirmar com as escolas a data da prova e o edital. Quando chegarem, os treinos são ajustados.</p></section>${bloco('jaquinho')}${bloco('maia')}
+  <section class="card"><h3>Meta da família</h3><p class="muted">Soma as questões dos dois de segunda a domingo. Esta semana: ${metaFamilia().n} de ${metaFamilia().meta}.</p>
+  <div class="row"><label class="muted">Meta (questões)<br><input id="metaq" type="number" min="20" step="10" value="${metaFamilia().meta}" style="width:120px;font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></label>
+  <label class="muted" style="flex:1 1 220px">Prêmio<br><input id="metap" value="${esc(metaFamilia().premio)}" style="width:100%;font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></label>
+  <button class="btn ghost" id="salvameta" style="align-self:flex-end">Salvar meta</button></div><p class="note" id="msgmeta"></p></section>
   <section class="card"><h3>Senha do papai</h3><p class="muted">${cfg.papaiHash?'Senha personalizada ativa.':'Ainda é a senha provisória "papai". Troque por uma que as crianças não saibam.'} A troca vale para todos os aparelhos.</p>
   <div class="row"><input id="ns1" type="password" placeholder="Nova senha" autocomplete="new-password" style="font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"><input id="ns2" type="password" placeholder="Repita a senha" autocomplete="new-password" style="font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"><button class="btn ghost" id="trocasenha">Trocar senha</button></div><p class="note" id="msgsenha"></p></section>`;
 }
@@ -1237,19 +1335,40 @@ function ligar(){
   document.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>{
     if(run.resp[run.i]!=null) return; const j=+b.dataset.j, dt=(Date.now()-run.qT0)/1000;
     if(dt<limPressa(run.qs[run.i]) && run.pend!==j){ run.pend=j; run.rap[run.i]=true; render(); return; }   // freio de pressa: pede para confirmar
-    run.resp[run.i]=j; run.tq[run.i]=Math.round(dt*10)/10; run.pend=null; render(); $('#next')?.focus();
+    run.resp[run.i]=j; run.tq[run.i]=Math.round(dt*10)/10; run.pend=null;
+    const q=run.qs[run.i];
+    /* Errou no treino ou na prática: entra logo depois uma questão gêmea (mesmo assunto, outros números). Até 3 por treino. */
+    if(j!==q.a && (run.tipo==='treino'||run.tipo==='pratica') && !q.gemea && !q.etapa && (run.gemeas||0)<3){
+      let g=null;
+      if(SKILLS[kid][q.skill].mat) g=questaoMat(kid,q.skill,{gemea:true});
+      else { const usados=new Set(run.qs.map(x=>x.qid)); const o=escolherPT(kid,bancoPT(kid).lista.filter(o=>o.skill===q.skill && !usados.has(o.qid)),ultimaVez(kid)); if(o) g=questaoPT(kid,o,{gemea:true}); }
+      if(g){ run.qs.splice(run.i+1,0,g); run.gemeas=(run.gemeas||0)+1; q.temGemea=true; }
+    }
+    render(); $('#next')?.focus();
   }));
   $('#next')?.addEventListener('click',async()=>{
     if(run.i+1<run.qs.length){ run.i++; run.qT0=Date.now(); run.pend=null; render(); window.scrollTo({top:0}); return; }
     run.dur=Math.round((Date.now()-run.t0)/1000);
     if(run.tipo==='refazer'){ run.fim=true; render(); return; }
-    const s=sessaoDoRun(false); run.fim=true; render(); await saveSession(s);
+    const antesMed=medalhasOk(kid), antesMeta=metaFamilia(), jaTinhaHoje=sessions.some(x=>x.kid===kid&&x.date===today()&&!x.parcial&&x.id!==run.id);
+    const s=sessaoDoRun(false); upsertSession(s);
+    const M=medalhas(kid), novas=M.lista.filter(x=>x.ok && !antesMed.includes(x.id)), depoisMeta=metaFamilia(), seq=sequencia(kid);
+    run.festa=[];
+    if(s.items.length>=5 && s.score===s.items.length) run.festa.push('Gabaritou! Nenhum erro!');
+    novas.forEach(x=>run.festa.push(`Nova conquista: ${x.nome}! (${x.regra})`));
+    if(novas.length && M.lista.every(x=>x.ok)) run.festa.push(M.fim);
+    if(antesMeta.n<antesMeta.meta && depoisMeta.n>=depoisMeta.meta) run.festa.push(`Meta da família batida! Prêmio liberado: ${depoisMeta.premio}.`);
+    if(!jaTinhaHoje && seq>=2) run.festa.push(`${seq} dias seguidos de treino!`);
+    run.fim=true; render(); if(run.festa.length) confete(); await enviarFila();
   });
   $('#again')?.addEventListener('click',()=>{ if(run && (run.tipo==='simulado'||run.tipo==='pratica')){ run=null; render(); } else novaRun('treino'); });
   $('#voltar')?.addEventListener('click',()=>{ run=null; render(); });
   $('#refazer')?.addEventListener('click',()=>{ const qs=run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>{ const correta=q.options[q.a]; const sh=shuffle(q.options); return {...q,options:sh,a:sh.indexOf(correta),reforco:false}; }); iniciarRun(qs,'refazer'); render(); window.scrollTo({top:0}); });
   $('#estudar-erros')?.addEventListener('click',()=>{ const e=[...new Set(run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>q.skill))]; run=null; view='estudar'; render(); $('#view').innerHTML=telaEstudar(e.length?e:null); window.scrollTo({top:0,behavior:'smooth'}); });
   document.querySelectorAll('[data-serie]').forEach(b=>b.addEventListener('click',()=>{ cfg.maiaSerie=+b.dataset.serie; saveCfg(); render(); }));
+  $('#salvameta')?.addEventListener('click',()=>{ const n=Math.round(+$('#metaq').value), p=$('#metap').value.trim();
+    if(!(n>=20)){ $('#msgmeta').textContent='Use uma meta de pelo menos 20 questões.'; return; }
+    cfg.metaSemana=n; cfg.premioSemana=p||'pizza em família'; saveCfg({metaSemana:cfg.metaSemana,premioSemana:cfg.premioSemana}); render(); $('#msgmeta').textContent='Meta salva para os dois tablets.'; });
   $('#trocasenha')?.addEventListener('click',()=>{ const a=$('#ns1').value.trim(), b=$('#ns2').value.trim(), msg=$('#msgsenha');
     if(a.length<4){ msg.textContent='Use pelo menos 4 caracteres.'; return; } if(a!==b){ msg.textContent='As duas senhas não estão iguais.'; return; }
     cfg.papaiHash=hashSenha('papai',a); saveCfg({papaiHash:cfg.papaiHash}); render(); $('#msgsenha').textContent='Senha trocada. Na próxima vez, entre com a nova.'; });
