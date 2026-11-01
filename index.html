@@ -153,7 +153,7 @@ table.tbl th,table.tbl td{border-bottom:1px solid var(--line);padding:6px 8px;te
       <button class="kid" id="kid-maia" data-kid="maia"><span class="dot" style="background:var(--maia)"></span>Maya</button>
       <button class="kid" id="kid-jaquinho" data-kid="jaquinho"><span class="dot" style="background:var(--jaq)"></span>Jaquinho</button>
     </div>
-    <div class="userbox" id="userbox" hidden><span class="pill" id="quem"></span><button class="mini" id="sair">Sair</button></div>
+    <div class="userbox" id="userbox" hidden><span class="pill" id="quem"></span><button class="mini" id="som" aria-pressed="true">Som ligado</button><button class="mini" id="sair">Sair</button></div>
   </header>
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-treino" data-view="treino">Treino do dia</button>
@@ -252,10 +252,28 @@ const GEN = {
       return { q:pick([`Quanto é ${x} × ${y}?`,`Cada caixinha tem ${y} brigadeiros. Quantos brigadeiros há em ${x} caixinhas?`,`O James foge da cama dele e vai para a cama do papai e da mamãe ${y} vezes por semana. Em ${x} semanas, quantas vezes ele fugiu?`,`Na loja, a mamãe colocou ${y} flores em cada vaso. Quantas flores ela usou em ${x} vasos?`]), ...mc(p,[p+y,p-y,x+y,p+x]),
         ex:`${x} × ${y} = ${p}. Multiplicar é somar parcelas iguais: ${y} somado ${x} vezes.` };
     },
-    divisao(L){
-      const d=rnd(3,9), q=rnd(4,L>=5?25:12), n=d*q;
-      return { q:pick([`${n} adesivos de maquiagem foram divididos igualmente entre ${d} amigas. Quantos ficaram com cada uma?`,`${n} pedaços de pizza foram divididos igualmente entre ${d} pessoas. Quantos pedaços para cada uma?`,`A mamãe tem ${n} rosas e quer montar ${d} buquês iguais. Quantas rosas vão em cada buquê?`]), ...mc(q,[q+1,q-1,n-d,q+2]),
-        ex:`${n} ÷ ${d} = ${q}, porque ${d} × ${q} = ${n}. Para conferir uma divisão, multiplique de volta.` };
+    divisao(L,nv=2){
+      // degraus: 1 = tabuada ao contrário (÷2 a ÷5) · 2 = tabuada ao contrário (÷6 a ÷9) · 3 = com resto · 4 = resultado com 2 algarismos
+      const ctx=(n,d)=>pick([`${n} adesivos de maquiagem foram divididos igualmente entre ${d} amigas. Quantos ficaram com cada uma?`,`${n} pedaços de pizza foram divididos igualmente entre ${d} pessoas. Quantos pedaços para cada uma?`,`A mamãe tem ${n} rosas e quer montar ${d} buquês iguais. Quantas rosas vão em cada buquê?`,`A Maya e o papai fizeram ${n} brigadeiros e guardaram em ${d} potes iguais (antes de começar a disputa de quem come mais). Quantos brigadeiros em cada pote?`,`${n} esmaltes foram arrumados em ${d} prateleiras, a mesma quantidade em cada uma. Quantos esmaltes por prateleira?`,`Quanto é ${n} ÷ ${d}?`]);
+      if(nv<=2){
+        const d = nv===1 ? rnd(2,5) : rnd(6,9), q = rnd(2, L>=5?12:10), n=d*q;
+        const pulos=Array.from({length:q},(_,i)=>N(d*(i+1))).join(', ');
+        return { q:ctx(n,d), ...mc(q,[q+1,q-1,q+2,n-d]),
+          ex: nv===1 ? `Conte de ${d} em ${d} até chegar a ${n}: ${pulos}. Foram ${q} pulos, então ${n} ÷ ${d} = ${q}. Confira: ${d} × ${q} = ${n}.`
+                     : `É a tabuada do ${d} ao contrário: ${d} × ${q} = ${n}, então ${n} ÷ ${d} = ${q}. Se não lembrar, comece em ${d} × 5 = ${d*5} e vá somando ou tirando ${d}.` };
+      }
+      if(nv===3){
+        const d=rnd(3,9), q=rnd(3,L>=5?12:9), r=rnd(1,d-1), n=d*q+r;
+        const f=(a,b)=>`${a} para cada, ${b===1?'sobra 1':'sobram '+b}`;
+        const erradas=[f(q+1,r),f(q-1,r+d),f(q,r===d-1?r-1:r+1),f(q+1,Math.max(1,r-1)),f(q-1,r)];
+        const ped=pick([[`A mamãe tem ${n} rosas e vai montar ${d} buquês iguais, com o máximo de rosas em cada um.`,'Quantas rosas vão em cada buquê e quantas sobram?'],[`${n} adesivos de maquiagem vão ser divididos igualmente entre ${d} amigas.`,'Quantos para cada uma e quantos sobram?'],[`A Maya tem ${n} pães de queijo para dividir igualmente entre ${d} pratos.`,'Quantos em cada prato e quantos sobram (para a disputa com o papai)?']]);
+        return { q:ped.join(' '), ...mc(f(q,r),erradas,null),
+          ex:`Procure na tabuada do ${d} o maior resultado que não passa de ${n}: ${d} × ${q} = ${d*q}. Sobram ${n} − ${d*q} = ${r}. O resto é sempre menor que ${d}: se sobrar ${d} ou mais, dá para dar mais um para cada.` };
+      }
+      const d=rnd(2,L>=5?9:6); let q; do{ q=rnd(11,L>=5?60:30); }while(q%10===0); const n=d*q, t=Math.floor(q/10)*10, u=q-t;
+      const inv=+String(q).split('').reverse().join('');
+      return { q:ctx(n,d), ...mc(q,[q+10,q-10,q+1,q-1,inv]),
+        ex:`Separe em partes fáceis: ${n} = ${d*t} + ${d*u}. ${d*t} ÷ ${d} = ${t} e ${d*u} ÷ ${d} = ${u}. Juntando: ${t} + ${u} = ${q}. Confira: ${d} × ${q} = ${n}.` };
     },
     fracoes(L){
       const opts=[[2,'a metade'],[3,'a terça parte'],[4,'a quarta parte'],[5,'a quinta parte']];
@@ -882,17 +900,21 @@ const LSU='missao-bolsa-login';
 let user=null; try{ const u=localStorage.getItem(LSU); if(u&&USUARIOS[u]) user=u; }catch(e){}
 const ehPai=()=>user==='papai';
 
-/* ================= degraus do troco (Maya) ================= */
-/* 1 = reais inteiros · 2 = centavos ,00/,50 · 3 = centavos quebrados. Sobe depois de 4 acertos seguidos no degrau; desce depois de 3 erros seguidos. */
-function degrauTroco(){
-  let nv=1, ok=0, er=0;
-  for(const i of itemsDe('maia').filter(i=>i.skill==='dinheiro' && i.nv)){
+/* ================= degraus (Maya): troco e divisão ================= */
+/* Troco: 1 = reais inteiros · 2 = ,00/,50 · 3 = centavos quebrados.
+   Divisão: 1 = ÷2 a ÷5 · 2 = ÷6 a ÷9 · 3 = com resto · 4 = resultado com 2 algarismos.
+   Sobe depois de 4 acertos seguidos no degrau; desce depois de 3 erros seguidos. */
+const DEGRAUS={dinheiro:3, divisao:4};
+function degrauDe(sk){
+  const max=DEGRAUS[sk]; let nv=1, ok=0, er=0;
+  for(const i of itemsDe('maia').filter(i=>i.skill===sk && i.nv)){
     if(i.nv!==nv) continue;
-    if(i.ok){ ok++; er=0; if(ok>=4 && nv<3){ nv++; ok=0; } }
+    if(i.ok){ ok++; er=0; if(ok>=4 && nv<max){ nv++; ok=0; } }
     else { er++; ok=0; if(er>=3 && nv>1){ nv--; er=0; } }
   }
   return nv;
 }
+const degrauTroco=()=>degrauDe('dinheiro');
 
 /* ================= tempo por questão e freio de pressa ================= */
 const limPressa=q=>q.texto?7:4;   // segundos mínimos antes de responder sem confirmação
@@ -900,7 +922,7 @@ const limPressa=q=>q.texto?7:4;   // segundos mínimos antes de responder sem co
 /* ================= salvar também o que foi respondido no meio ================= */
 function respondidas(r){ return r ? r.qs.map((q,i)=>({q,i})).filter(o=>r.resp[o.i]!=null) : []; }
 function sessaoDoRun(parcial){
-  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; if(q.gemea) o.g=1; if(q.etapa) o.e=q.etapa; return o; });
+  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; if(q.gemea) o.g=1; if(q.etapa) o.e=q.etapa; if(q.revisao) o.rv=1; return o; });
   const s={id:run.id, kid:run.kid, tipo:run.tipo, date:today(), ts, serie:serieDe(run.kid), dur:Math.round((ts-run.t0)/1000), items:its, score:its.filter(i=>i.ok).length};
   if(parcial) s.parcial=true;
   return s;
@@ -986,6 +1008,24 @@ function confete(){
   document.body.appendChild(box); setTimeout(()=>box.remove(),3600);
 }
 
+/* ================= v12 — sons (gerados no próprio tablet, sem arquivo de áudio) ================= */
+/* Acertou: plim-plim alegre. Errou: "rum-rum", o "não" do James. No simulado não toca nada (a correção é só no fim). */
+let somOn=true; try{ somOn=localStorage.getItem('missao-bolsa-som')!=='0'; }catch(e){}
+let actx=null;
+function audio(){ try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); return actx; }catch(e){ return null; } }
+function tom(f0,f1,ini,dur,tipo,vol){
+  const c=audio(); if(!c) return; const t=c.currentTime+ini, o=c.createOscillator(), g=c.createGain(), fl=c.createBiquadFilter();
+  o.type=tipo; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+  fl.type='lowpass'; fl.frequency.value=tipo==='sine'?8000:1400;
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.025); g.gain.setValueAtTime(vol,t+dur*0.6); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(fl); fl.connect(g); g.connect(c.destination); o.start(t); o.stop(t+dur+0.05);
+}
+function somAcerto(){ if(!somOn) return; [[784,0],[1047,0.09],[1319,0.18]].forEach(([f,i])=>{ tom(f,f,i,0.22,'sine',0.22); tom(f*2,f*2,i,0.12,'sine',0.05); }); }
+/* "rum-rum": duas notas graves e nasais, a segunda mais baixa, como criança negando de boca fechada */
+function somErro(){ if(!somOn) return; tom(230,205,0,0.2,'triangle',0.32); tom(115,103,0,0.2,'sine',0.18); tom(205,160,0.27,0.3,'triangle',0.32); tom(103,80,0.27,0.3,'sine',0.18); }
+function somFesta(){ if(!somOn) return; [523,659,784,1047,1319].forEach((f,i)=>tom(f,f,i*0.08,0.25,'sine',0.18)); tom(1568,1568,0.45,0.5,'sine',0.12); }
+function marcarSom(){ const b=$('#som'); if(b){ b.textContent=somOn?'Som ligado':'Som desligado'; b.setAttribute('aria-pressed',String(somOn)); } }
+
 /* ================= estado e armazenamento ================= */
 /* ---- Onde os treinos ficam salvos: Google Planilha via Apps Script (mesmo modelo do sistema da floricultura) ---- */
 const API_URL = 'https://script.google.com/macros/s/AKfycbx0X0ynsWZYjWvS_ehZt5LKk3_L3F4VGUgijW3nv7tsmGpG0XLRUCziiksPBbvfsinZ7Q/exec';   // termina em /exec — ver passo a passo no CLAUDE.md
@@ -1069,6 +1109,41 @@ function foco(k,n=3){ const m=maestria(k); return Object.entries(m).sort((a,b)=>
 
 /* ================= montagem do treino ================= */
 const diasEntre=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+/* Revisão do simulado: por 7 dias depois do último simulado, cada assunto (Matemática) ou questão (Português) errada
+   volta nos treinos e nas práticas com uma explicação ANTES da questão. Acertou depois da explicação, sai da lista. */
+const REV_DIAS=7;
+const ddmm=d=>d.slice(8)+'/'+d.slice(5,7);
+const maisDias=(d,n)=>{ const x=new Date(d+'T12:00:00'); x.setDate(x.getDate()+n); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); };
+function revisaoSimulado(k){
+  const s=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts)[0];
+  if(!s || diasEntre(s.date,today())>=REV_DIAS) return null;
+  const chave=i=>SKILLS[k][i.skill]?.mat?'sk:'+i.skill:i.qid;
+  const erros={}; for(const i of s.items) if(!i.ok && SKILLS[k][i.skill]) erros[chave(i)]={skill:i.skill,qid:i.qid,mat:!!SKILLS[k][i.skill].mat};
+  const feitos={};
+  for(const x of sessions.filter(x=>x.kid===k&&x.ts>s.ts)) for(const i of x.items) if(i.rv && erros[chave(i)]){ const f=feitos[chave(i)]||(feitos[chave(i)]={ok:false,hoje:false}); if(i.ok) f.ok=true; if(x.date===today()) f.hoje=true; }
+  const lista=Object.entries(erros).map(([c,e])=>({...e,chave:c,resolvido:!!feitos[c]?.ok,hojeVisto:!!feitos[c]?.hoje}));
+  return {sim:s, lista, pend:lista.filter(e=>!e.resolvido), ate:maisDias(s.date,REV_DIAS-1)};
+}
+function licaoAntes(k,sk){
+  const L=LICOES[k]?.[sk], X=DET2[k]?.[sk]; if(!L) return '';
+  return `<h3>${esc(L[0])}</h3><p>${esc(L[1])}</p><p class="muted">Exemplo: ${esc(L[2])}</p>${L[3]?`<p><strong>Dica:</strong> ${esc(L[3])}</p>`:''}${X?`<p><strong>Outro jeito de pensar:</strong> ${esc(X.j)}</p>${X.e.map(([a,b])=>`<p><strong>${esc(a)}</strong> → ${esc(b)}</p>`).join('')}`:''}`;
+}
+function questaoRevisao(k,e,B){
+  const extra={revisao:true, antes:licaoAntes(k,e.skill)};
+  if(e.mat) return questaoMat(k,e.skill,extra);
+  const o=B.map[e.qid]; return o ? questaoPT(k,o,extra) : null;
+}
+function textoRevisao(k){
+  const R=revisaoSimulado(k); if(!R || !R.lista.length) return '';
+  const cont={}; R.lista.forEach(e=>{ const n=SKILLS[k][e.skill].nome; cont[n]=cont[n]||{t:0,ok:0}; cont[n].t++; if(e.resolvido) cont[n].ok++; });
+  const pills=Object.entries(cont).map(([n,c])=>`<span class="pill">${c.ok===c.t?'✓ ':''}${esc(n)}${c.t>1?` (${c.ok}/${c.t})`:''}</span>`).join('');
+  const msg = R.pend.length
+    ? `Faltam <strong>${R.pend.length}</strong> de ${R.lista.length}. Até ${ddmm(R.ate)}, elas voltam nos treinos (até 3 por treino) e nas práticas do assunto, com uma explicação antes da questão. Acertou depois da explicação, sai da lista.`
+    : `Revisão completa: tudo o que foi errado no simulado já foi revisto e acertado.`;
+  return `<p><strong>Revisão do simulado de ${ddmm(R.sim.date)}:</strong> ${msg}</p><div class="row">${pills}</div>`;
+}
+function cardRevisao(k){ const t=textoRevisao(k); return t?`<section class="card"><h3>Revisão do simulado</h3>${t.replace(/^<p><strong>Revisão do simulado de ([^:]+):<\/strong>/,'<p>Do simulado de $1:')}</section>`:''; }
+
 /* Reforço com repetição espaçada: o que errou volta depois de 1 dia; acertou, volta depois de 3; acertou de novo, está fixado. */
 function devidos(k){
   const st={};
@@ -1081,7 +1156,7 @@ function devidos(k){
   return Object.values(st).filter(x=>diasEntre(x.last,hoje)>=(x.nivel===0?1:3)).sort((a,b)=>a.last<b.last?-1:1);
 }
 function questaoPT(k,o,extra){ const sh=shuffle(o.ops); return {skill:o.skill,qid:o.qid,q:o.q,texto:o.tx?TX[o.tx]:null,options:sh,a:sh.indexOf(o.ops[0]),ex:o.ex,...extra}; }
-function questaoMat(k,sk,extra){ const nv=(k==='maia'&&sk==='dinheiro')?degrauTroco():undefined; const g=GEN[k][sk](serieDe(k),nv); return {skill:sk,qid:sk+'-gen',q:g.q,options:g.options,a:g.a,ex:g.ex,...(nv?{nv}:{}),...extra}; }
+function questaoMat(k,sk,extra){ const nv=(k==='maia'&&DEGRAUS[sk])?degrauDe(sk):undefined; const g=GEN[k][sk](serieDe(k),nv); return {skill:sk,qid:sk+'-gen',q:g.q,options:g.options,a:g.a,ex:g.ex,...(nv?{nv}:{}),...extra}; }
 /* Quando a criança viu cada questão de Português pela última vez (-1 = nunca viu). */
 function ultimaVez(k){ const m={}; itemsDe(k).forEach((i,n)=>m[i.qid]=n); return q=>q in m?m[q]:-1; }
 function escolherPT(k,banco,uv){ if(!banco.length) return null; const nunca=banco.filter(o=>uv(o.qid)<0); if(nunca.length) return pick(nunca); return pick([...banco].sort((a,b)=>uv(a.qid)-uv(b.qid)).slice(0,3)); }
@@ -1091,7 +1166,15 @@ function montarTreino(k,tipo='treino'){
   const B=bancoPT(k), uv=ultimaVez(k);
   const qs=[]; const usados=new Set(); let fMat=nMat, fPt=nPt; const cont={};
   if(tipo==='treino'){
-    for(const d of devidos(k).slice(0,3)){
+    const R=revisaoSimulado(k), revK=new Set();
+    const intercala=l=>{ const m=l.filter(e=>e.mat), t=l.filter(e=>!e.mat), o=[]; while(m.length||t.length){ if(m.length) o.push(m.shift()); if(t.length) o.push(t.shift()); } return o; };
+    if(R) for(const e of [...intercala(R.pend.filter(e=>!e.hojeVisto)),...intercala(R.pend.filter(e=>e.hojeVisto))]){
+      if(revK.size>=3) break;
+      if(e.mat ? fMat<=0 : fPt<=0) continue;
+      const q=questaoRevisao(k,e,B); if(!q) continue;
+      qs.push(q); revK.add(e.chave); if(e.mat) fMat--; else { fPt--; usados.add(q.qid); } cont[e.skill]=(cont[e.skill]||0)+1;
+    }
+    for(const d of devidos(k).filter(d=>!revK.has(d.mat?'sk:'+d.skill:d.qid)).slice(0,revK.size?2:3)){
       if(d.mat && fMat>0){ qs.push(questaoMat(k,d.skill,{reforco:true})); fMat--; cont[d.skill]=(cont[d.skill]||0)+1; }
       else if(!d.mat && fPt>0){ const o=B.map[d.qid]; if(o){ qs.push(questaoPT(k,o,{reforco:true})); usados.add(o.qid); fPt--; cont[d.skill]=(cont[d.skill]||0)+1; } }
     }
@@ -1115,6 +1198,14 @@ function montarTreino(k,tipo='treino'){
   return tipo==='simulado' ? qs.sort((a,b)=>(SKILLS[k][b.skill].mat?1:0)-(SKILLS[k][a.skill].mat?1:0)) : shuffle(qs).flatMap(q=>q.grupo||[q]);
 }
 function montarPratica(k,sk){
+  const qs=montarPraticaBase(k,sk), R=revisaoSimulado(k), B=bancoPT(k);
+  const rev=(R?R.pend.filter(e=>e.skill===sk):[]).slice(0,2).map(e=>questaoRevisao(k,e,B)).filter(Boolean);
+  if(!rev.length) return qs;
+  const resto=qs.filter(q=>!rev.some(r=>r.qid===q.qid && !r.qid.endsWith('-gen')));
+  const etapas=resto.filter(q=>q.etapa), outras=resto.filter(q=>!q.etapa);
+  return [...rev, ...etapas, ...outras.slice(0, Math.max(0, qs.length-rev.length-etapas.length))];
+}
+function montarPraticaBase(k,sk){
   if(k==='jaquinho' && sk==='fracoes_soma' && emEtapas()) return [...etapasFracoes(),...Array.from({length:4},()=>questaoMat(k,sk,{}))];
   if(SKILLS[k][sk].mat) return Array.from({length:5},()=>questaoMat(k,sk,{}));
   const uv=ultimaVez(k);
@@ -1185,6 +1276,7 @@ function telaInicio(){
       <button class="btn ghost" id="simulado">Fazer simulado</button>
     </div>
   </section>
+  ${cardRevisao(kid)}
   ${cardMedalhas(kid)}
   ${cardMeta()}
   ${telaEvolucao(kid,true)}`;
@@ -1192,6 +1284,12 @@ function telaInicio(){
 
 function telaQuestao(){
   const q=run.qs[run.i], resp=run.resp[run.i], K=KIDS[kid], sim=run.tipo==='simulado';
+  if(q.antes && !(run.antesOk||{})[run.i]) return `<section class="card">
+    <div class="qhead"><span class="row" style="gap:6px"><span class="tag ref">Revisão do simulado</span><span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}</span></span><span>${run.i+1} de ${run.qs.length}</span></div>
+    <p><strong>${kid==='maia'?'Linda do papai, no simulado você errou uma questão deste assunto.':'No simulado você errou uma questão deste assunto.'}</strong> Antes de tentar de novo, leia com calma:</p>
+    <div class="lesson">${q.antes}</div>
+    <div class="row"><button class="btn" id="antes-ok">Entendi, quero tentar</button></div>
+  </section>`;
   const letras='ABCD';
   const opts=q.options.map((o,j)=>{ let cls=''; if(resp!=null){ if(sim){ if(j===resp) cls='sel'; } else { if(j===q.a) cls='ok'; else if(j===resp) cls='no'; } }
     if(resp==null && run.pend===j) cls='pend';
@@ -1200,7 +1298,7 @@ function telaQuestao(){
   let fb=''; if(resp!=null && !sim){ const ok=resp===q.a; fb=`<div class="feedback ${ok?'ok':'no'}" role="status"><b>${esc(ok?pick(K.vivas):pick(K.forca))}</b><span>${esc(q.ex)}</span>${q.temGemea?'<span><strong>Agora vem uma gêmea:</strong> uma questão parecida, para fixar o jeito certo.</span>':''}</div>`; }
   const titulo = sim ? 'Simulado' : run.tipo==='refazer' ? 'Refazendo' : run.tipo==='pratica' ? 'Praticando' : '';
   return `<section class="card">
-    <div class="qhead"><span class="row" style="gap:6px">${q.reforco?'<span class="tag ref">Reforço</span>':''}${q.gemea?'<span class="tag ref">Gêmea</span>':''}${q.etapa?`<span class="tag ref">Etapa ${q.etapa} de 3</span>`:''}${titulo?`<span class="tag ref">${titulo}</span>`:''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${q.nv} de 3`:''}</span></span><span>${sim?`<span id="timer">${mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
+    <div class="qhead"><span class="row" style="gap:6px">${q.revisao?'<span class="tag ref">Revisão do simulado</span>':''}${q.reforco?'<span class="tag ref">Reforço</span>':''}${q.gemea?'<span class="tag ref">Gêmea</span>':''}${q.etapa?`<span class="tag ref">Etapa ${q.etapa} de 3</span>`:''}${titulo?`<span class="tag ref">${titulo}</span>`:''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${q.nv} de ${DEGRAUS[q.skill]||3}`:''}</span></span><span>${sim?`<span id="timer">${mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
     <div class="progress" aria-hidden="true"><i style="width:${(run.i+(resp!=null?1:0))/run.qs.length*100}%"></i></div>
     ${q.texto?`<div class="texto">${esc(q.texto)}</div>`:''}
     <p class="qtext">${esc(q.q)}</p>
@@ -1307,8 +1405,9 @@ function telaPainel(){
       ${k==='maia'?`<div class="seg" role="group" aria-label="Série da Maya em 2027"><button id="serie4" data-serie="4" aria-pressed="${cfg.maiaSerie===4}">4º ano</button><button id="serie5" data-serie="5" aria-pressed="${cfg.maiaSerie===5}">5º ano</button></div>`:'<span class="pill">7º ano em 2027</span>'}</div>
       <div class="row"><span class="pill">${nS} ${nS===1?'treino':'treinos'}</span><span class="pill">${sequencia(k)} ${sequencia(k)===1?'dia seguido':'dias seguidos'}</span><span class="pill">Mat ${acerto(k,true)??'—'}%</span><span class="pill">Port ${acerto(k,false)??'—'}%</span>${ult?`<span class="pill">Último: ${ult.date.slice(8)}/${ult.date.slice(5,7)}</span>`:''}</div>
       ${(()=>{ const rv=devidos(k).length, sims=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts).slice(0,5); return `<p>Reforço pendente: <strong>${rv}</strong> ${rv===1?'questão':'questões'} que ${K.nome} errou e que voltam nos próximos treinos.</p>${sims.length?`<p>Simulados: ${sims.map(x=>`${x.date.slice(8)}/${x.date.slice(5,7)} → <strong>${x.score}/${x.items.length}</strong> (${Math.round(100*x.score/x.items.length)}%)`).join(' · ')}</p>`:'<p class="muted">Nenhum simulado completo ainda.</p>'}`; })()}
-      ${k==='maia'?`<p>Troco em degraus: Maya está no <strong>degrau ${degrauTroco()} de 3</strong> (1 = reais inteiros · 2 = ,00 e ,50 · 3 = centavos quebrados). Sobe com 4 acertos seguidos.</p>`:''}
+      ${k==='maia'?`<p>Troco em degraus: Maya está no <strong>degrau ${degrauTroco()} de 3</strong> (1 = reais inteiros · 2 = ,00 e ,50 · 3 = centavos quebrados). Sobe com 4 acertos seguidos.</p><p>Divisão em degraus: Maya está no <strong>degrau ${degrauDe('divisao')} de 4</strong> (1 = ÷2 a ÷5 · 2 = ÷6 a ÷9 · 3 = com resto · 4 = resultado com 2 algarismos). Sobe com 4 acertos seguidos; desce com 3 erros seguidos.</p>`:''}
       ${k==='jaquinho'?(()=>{ const it=itemsDe(k).filter(i=>i.e), nm=['MMC','converter','somar']; return `<p>Soma de frações ${emEtapas()?'<strong>em 3 etapas</strong> (até ficar verde)':'já dominada: voltou ao formato normal'}.${it.length?' Acerto por etapa: '+[1,2,3].map(e=>{ const l=it.filter(i=>i.e===e); return `${nm[e-1]} ${l.length?Math.round(100*l.filter(i=>i.ok).length/l.length)+'% ('+l.length+')':'—'}`; }).join(' · ')+'.':''}</p>`; })():''}
+      ${textoRevisao(k)}
       <p>Conquistas: ${medalhas(k).lista.map(x=>`${x.nome} ${x.ok?'✓':'('+x.prog+')'}`).join(' · ')}.</p>
       ${tabelaDias(k)}
       <h3>Foco agora</h3>
@@ -1316,7 +1415,7 @@ function telaPainel(){
       ${nS?grafico(k):''}
       <div class="skills">${barras(k)}</div>
     </section>`; };
-  return `<section class="card"><p>Como funciona o reforço: o treino diário escolhe mais questões dos assuntos fracos, e toda questão errada volta depois de 1 dia; se acertar, volta de novo depois de 3 dias; acertando de novo, conta como fixada. O simulado semanal mede como estão no formato da prova. Na prova de bolsa do Objetivo e do Etapa caem Português e Matemática, com o conteúdo da série que eles estão terminando.</p><p class="note">Ainda faltam confirmar com as escolas a data da prova e o edital. Quando chegarem, os treinos são ajustados.</p></section>${bloco('jaquinho')}${bloco('maia')}
+  return `<section class="card"><p>Revisão do simulado: por 7 dias depois de cada simulado, o que foi errado volta nos treinos (até 3 por treino) e nas práticas do assunto, sempre com uma explicação antes da questão; acertou depois da explicação, sai da revisão. Como funciona o reforço: o treino diário escolhe mais questões dos assuntos fracos, e toda questão errada volta depois de 1 dia; se acertar, volta de novo depois de 3 dias; acertando de novo, conta como fixada. O simulado semanal mede como estão no formato da prova. Na prova de bolsa do Objetivo e do Etapa caem Português e Matemática, com o conteúdo da série que eles estão terminando.</p><p class="note">Ainda faltam confirmar com as escolas a data da prova e o edital. Quando chegarem, os treinos são ajustados.</p></section>${bloco('jaquinho')}${bloco('maia')}
   <section class="card"><h3>Meta da família</h3><p class="muted">Soma as questões dos dois de segunda a domingo. Esta semana: ${metaFamilia().n} de ${metaFamilia().meta}.</p>
   <div class="row"><label class="muted">Meta (questões)<br><input id="metaq" type="number" min="20" step="10" value="${metaFamilia().meta}" style="width:120px;font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></label>
   <label class="muted" style="flex:1 1 220px">Prêmio<br><input id="metap" value="${esc(metaFamilia().premio)}" style="width:100%;font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></label>
@@ -1344,8 +1443,10 @@ function ligar(){
       else { const usados=new Set(run.qs.map(x=>x.qid)); const o=escolherPT(kid,bancoPT(kid).lista.filter(o=>o.skill===q.skill && !usados.has(o.qid)),ultimaVez(kid)); if(o) g=questaoPT(kid,o,{gemea:true}); }
       if(g){ run.qs.splice(run.i+1,0,g); run.gemeas=(run.gemeas||0)+1; q.temGemea=true; }
     }
+    if(run.tipo!=='simulado') (j===q.a?somAcerto:somErro)();
     render(); $('#next')?.focus();
   }));
+  $('#antes-ok')?.addEventListener('click',()=>{ run.antesOk=run.antesOk||{}; run.antesOk[run.i]=1; run.qT0=Date.now(); render(); window.scrollTo({top:0}); });
   $('#next')?.addEventListener('click',async()=>{
     if(run.i+1<run.qs.length){ run.i++; run.qT0=Date.now(); run.pend=null; render(); window.scrollTo({top:0}); return; }
     run.dur=Math.round((Date.now()-run.t0)/1000);
@@ -1359,11 +1460,11 @@ function ligar(){
     if(novas.length && M.lista.every(x=>x.ok)) run.festa.push(M.fim);
     if(antesMeta.n<antesMeta.meta && depoisMeta.n>=depoisMeta.meta) run.festa.push(`Meta da família batida! Prêmio liberado: ${depoisMeta.premio}.`);
     if(!jaTinhaHoje && seq>=2) run.festa.push(`${seq} dias seguidos de treino!`);
-    run.fim=true; render(); if(run.festa.length) confete(); await enviarFila();
+    run.fim=true; render(); if(run.festa.length){ confete(); setTimeout(somFesta,450); } await enviarFila();
   });
   $('#again')?.addEventListener('click',()=>{ if(run && (run.tipo==='simulado'||run.tipo==='pratica')){ run=null; render(); } else novaRun('treino'); });
   $('#voltar')?.addEventListener('click',()=>{ run=null; render(); });
-  $('#refazer')?.addEventListener('click',()=>{ const qs=run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>{ const correta=q.options[q.a]; const sh=shuffle(q.options); return {...q,options:sh,a:sh.indexOf(correta),reforco:false}; }); iniciarRun(qs,'refazer'); render(); window.scrollTo({top:0}); });
+  $('#refazer')?.addEventListener('click',()=>{ const qs=run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>{ const correta=q.options[q.a]; const sh=shuffle(q.options); return {...q,options:sh,a:sh.indexOf(correta),reforco:false,revisao:false,antes:null}; }); iniciarRun(qs,'refazer'); render(); window.scrollTo({top:0}); });
   $('#estudar-erros')?.addEventListener('click',()=>{ const e=[...new Set(run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>q.skill))]; run=null; view='estudar'; render(); $('#view').innerHTML=telaEstudar(e.length?e:null); window.scrollTo({top:0,behavior:'smooth'}); });
   document.querySelectorAll('[data-serie]').forEach(b=>b.addEventListener('click',()=>{ cfg.maiaSerie=+b.dataset.serie; saveCfg(); render(); }));
   $('#salvameta')?.addEventListener('click',()=>{ const n=Math.round(+$('#metaq').value), p=$('#metap').value.trim();
@@ -1376,6 +1477,8 @@ function ligar(){
 document.querySelectorAll('.kid').forEach(b=>b.addEventListener('click',()=>setKid(b.dataset.kid)));
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
 $('#sair').addEventListener('click',sair);
+$('#som').addEventListener('click',()=>{ somOn=!somOn; try{ localStorage.setItem('missao-bolsa-som',somOn?'1':'0'); }catch(e){} marcarSom(); if(somOn) somAcerto(); });
+marcarSom();
 if(user==='papai') view='painel';
 render(); note(); const dbPronto=initDb();
 </script>
