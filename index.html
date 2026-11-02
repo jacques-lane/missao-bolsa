@@ -332,7 +332,7 @@ const GEN = {
       let b,d; do{ b=pick([2,3,4,5,6]); d=pick([2,3,4,5,6]); }while(b===d);
       const a=rnd(1,b-1), c=rnd(1,d-1); const n=a*d+c*b, m=b*d;
       return { q:`Quanto é ${a}/${b} + ${c}/${d}?`, ...mc(frac(n,m),[frac(a+c,b+d),frac(a+c,b*d),frac(n,b+d),frac(n+1,m)]),
-        ex:`Com denominadores diferentes, primeiro deixe os dois iguais: ${a}/${b} = ${a*d}/${m} e ${c}/${d} = ${c*b}/${m}. Somando: ${n}/${m}${frac(n,m)!==n+'/'+m?' = '+frac(n,m):''}. Nunca some os de baixo!` };
+        ex:`Método borboleta: asas = multiplica em cruz (${a} × ${d} = ${a*d} e ${c} × ${b} = ${c*b}); corpo = multiplica os de baixo (${b} × ${d} = ${m}). Soma as asas em cima do corpo: (${a*d} + ${c*b})/${m} = ${n}/${m}${frac(n,m)!==n+'/'+m?' = '+frac(n,m)+' (simplificado)':''}. Nunca some os de baixo!` };
     },
     fracao_quantidade(){
       const den=pick([3,4,5,8,10]), num=rnd(2,den-1), tot=den*rnd(2,12), r=tot/den*num;
@@ -490,7 +490,7 @@ const LICOES = {
     expressoes:['A ordem que derruba muita gente','Expressão tem regra de trânsito: 1º parênteses, 2º potências, 3º × e ÷, 4º + e −. Não é da esquerda para a direita direto!','10 + 2 × 5 = 10 + 10 = 20. O Daniel faria 12 × 5 = 60, e erraria feio.','Sublinhe as multiplicações e divisões antes de começar.'],
     potencias:['Multiplicação turbinada','Potência é multiplicar a base por ela mesma. O expoente diz quantas vezes ela aparece.','5³ = 5 × 5 × 5 = 125. Pense no violino: 4 cordas, cada uma com 4 notas treinadas = 4² = 16 notas.','Qualquer número elevado a 1 é ele mesmo; elevado a 0 é 1.'],
     mmc_mdc:['Encontros e divisões','MMC: quando algo se repete e você quer saber quando coincide (ônibus, alarmes). MDC: quando quer dividir em grupos iguais, os maiores possíveis.','Você e o Daniel dão voltas no pasto do sítio: você a cada 4 min, ele a cada 6. Múltiplos de 4 → 4, 8, 12; de 6 → 6, 12. Vocês se encontram na largada em 12 min (MMC). MDC de 12 e 18 = 6.','Problema de "juntos de novo" = MMC. Problema de "dividir sem sobrar" = MDC.'],
-    fracoes_soma:['Iguale antes de somar','Para somar frações, os números de baixo (denominadores) precisam ser iguais. Nunca some os de baixo!','1/2 + 1/3 → 3/6 + 2/6 = 5/6.','Use o MMC dos denominadores para encontrar o número comum.'],
+    fracoes_soma:['Método borboleta','Para somar frações com os de baixo diferentes: as asas são as multiplicações em cruz, o corpo é a multiplicação dos de baixo. Soma as asas e põe em cima do corpo. Nunca some os de baixo!','2/3 + 1/4: asas 2×4 = 8 e 1×3 = 3; corpo 3×4 = 12 → (8 + 3)/12 = 11/12.','No fim, veja se dá para simplificar (dividir em cima e embaixo pelo mesmo número).'],
     fracao_quantidade:['Divide e multiplica','Para achar uma fração de um número: divide pelo de baixo e multiplica pelo de cima.','3/4 de 40: 40 ÷ 4 = 10; 10 × 3 = 30.','Faça a divisão primeiro: as contas ficam menores.'],
     decimais:['Vírgula embaixo de vírgula','Na soma e na subtração de decimais, alinhe as vírgulas e complete com zeros.','2,5 + 1,25 → 2,50 + 1,25 = 3,75.','Erro comum: alinhar pela direita como se fossem números inteiros.'],
     porcentagem:['Por cento é por cem','30% quer dizer 30 de cada 100. Para calcular, multiplique pelo número e divida por 100.','Um estojo de violino de R$ 150 com 20% de desconto: 150 × 20 ÷ 100 = 30 de desconto, então paga 120. Atalhos: 10% é dividir por 10; 50% é a metade; 25% é dividir por 4.','Desconto: calcule a porcentagem e tire do preço.'],
@@ -584,9 +584,9 @@ const DET = {
       e:[['MMC de 12 e 18','12, 18 ÷2 → 6, 9 ÷2 → 3, 9 ÷3 → 1, 3 ÷3 → 1, 1. MMC = 2 × 2 × 3 × 3 = 36.'],['MDC de 12 e 18','12 = 2² × 3 e 18 = 2 × 3². Fatores comuns com o menor expoente: 2 × 3 = 6. Conferindo: 36 × 6 = 216 = 12 × 18 ✔']],
       x:['Trocar um pelo outro: "juntos de novo" é MMC; "dividir em grupos iguais sem sobrar" é MDC.','Achar que o MMC é sempre a multiplicação dos dois números.'],
       d:'MMC e MDC de 8 e 12.'},
-    fracoes_soma:{p:['Mesmo denominador: some (ou subtraia) só os de cima e mantenha o de baixo.','Denominadores diferentes: encontre o MMC deles.','Transforme cada fração: divida o MMC pelo denominador e multiplique pelo numerador.','Some e simplifique dividindo em cima e embaixo pelo mesmo número.'],
-      e:[['2/3 + 1/4','MMC(3, 4) = 12. 2/3 = 8/12 e 1/4 = 3/12. Soma: 11/12.'],['5/6 − 1/4','MMC(6, 4) = 12. 10/12 − 3/12 = 7/12.'],['Simplificar 6/8','Divida os dois por 2: 3/4.']],
-      x:['Somar os denominadores: 1/2 + 1/3 não é 2/5.','Mudar o de baixo e esquecer de ajustar o de cima.'],
+    fracoes_soma:{p:['Mesmo denominador: some (ou subtraia) só os de cima e mantenha o de baixo.','Denominadores diferentes: use o método borboleta.','Asas: multiplique em cruz (cima da 1ª × baixo da 2ª e cima da 2ª × baixo da 1ª). Corpo: multiplique os dois de baixo.','Some as asas (na subtração, subtraia), coloque em cima do corpo e simplifique dividindo em cima e embaixo pelo mesmo número.'],
+      e:[['2/3 + 1/4','Asas: 2×4 = 8 e 1×3 = 3. Corpo: 3×4 = 12. Resultado: 11/12.'],['5/6 − 1/4','Asas: 5×4 = 20 e 1×6 = 6. Corpo: 6×4 = 24. 20 − 6 = 14 → 14/24 = 7/12.'],['Simplificar 6/8','Divida os dois por 2: 3/4.']],
+      x:['Somar os denominadores: 1/2 + 1/3 não é 2/5.','Multiplicar reto (cima × cima) em vez de em cruz.','Esquecer de simplificar no final.'],
       d:'1/2 + 1/3 e 3/4 + 1/6'},
     fracao_quantidade:{p:['Divida a quantidade pelo número de baixo.','Multiplique o resultado pelo número de cima.','Problema ao contrário ("2/3 de um número é 18"): divida pelo de cima e multiplique pelo de baixo.','Confira se o resultado faz sentido: 3/4 de algo tem que ser menos que o todo.'],
       e:[['3/5 de 40','40 ÷ 5 = 8; 8 × 3 = 24.'],['2/3 de um número é 18. Que número é esse?','18 ÷ 2 = 9 (isso é 1/3); 9 × 3 = 27.']],
@@ -832,7 +832,7 @@ const DET2 = {
     expressoes:{j:'Trate a expressão como uma fila com prioridade: parênteses passam na frente, depois potência, depois × e ÷ (na ordem em que aparecem), e por último + e −. Reescreva a expressão a cada passo, linha por linha.',e:[['3 + 4 × 2 − 6 ÷ 3','4 × 2 = 8 e 6 ÷ 3 = 2 → 3 + 8 − 2 = 9.'],['[20 − (3 + 2) × 2] ÷ 5','(3 + 2) = 5; 5 × 2 = 10; 20 − 10 = 10; 10 ÷ 5 = 2.']],r:'expressões numéricas'},
     potencias:{j:'Escreva a multiplicação por extenso antes de calcular: 2⁴ = 2 × 2 × 2 × 2. Isso evita o erro de multiplicar base por expoente.',e:[['5²  e  2⁵','5 × 5 = 25. 2 × 2 × 2 × 2 × 2 = 32. Ordem trocada, resultado diferente!'],['10⁴','1 seguido de 4 zeros: 10.000.']],r:'potenciação'},
     mmc_mdc:{j:'Pergunta-chave: os eventos vão se ENCONTRAR de novo (MMC, resposta maior que os números) ou vou DIVIDIR em grupos (MDC, resposta menor que os números)?',e:[['Alarme a cada 6 min e a cada 9 min','MMC(6, 9) = 18: tocam juntos de novo em 18 minutos.'],['24 violetas e 36 rosas em vasos iguais, o máximo de vasos','MDC(24, 36) = 12 vasos, com 2 violetas e 3 rosas em cada.']],r:'mmc e mdc'},
-    fracoes_soma:{j:'Pense em fatias de pizzas cortadas de jeitos diferentes: não dá para somar fatia de 1/2 com fatia de 1/3 sem antes recortar as duas pizzas no mesmo tamanho de fatia (o MMC).',e:[['1/3 + 1/6','MMC = 6. 1/3 = 2/6. 2/6 + 1/6 = 3/6 = 1/2.'],['2/5 + 1/2','MMC = 10. 4/10 + 5/10 = 9/10.']],r:'adição de frações'},
+    fracoes_soma:{j:'Desenhe a borboleta: duas setas cruzadas são as asas (multiplica em cruz) e embaixo fica o corpo (multiplica os de baixo). Asas somadas em cima, corpo embaixo.',e:[['1/3 + 1/6','Asas: 1×6 = 6 e 1×3 = 3. Corpo: 3×6 = 18. 9/18 = 1/2.'],['2/5 + 1/2','Asas: 2×2 = 4 e 1×5 = 5. Corpo: 5×2 = 10. Resultado: 9/10.']],r:'método borboleta frações'},
     fracao_quantidade:{j:'Desenhe uma barra dividida em partes iguais (o número de baixo). Descubra quanto vale cada parte e conte as partes que a fração pede (o número de cima).',e:[['2/7 de 35','Cada parte: 35 ÷ 7 = 5. Duas partes: 10.'],['3/4 de 120','Cada parte: 30. Três partes: 90.']],r:'fração de uma quantidade'},
     decimais:{j:'Pense em dinheiro: 3,5 é R$ 3,50. Somar e subtrair decimais é como fazer conta de reais e centavos: vírgula embaixo de vírgula.',e:[['5,2 − 1,75','5,20 − 1,75 = 3,45.'],['0,4 × 0,2','4 × 2 = 8 com 2 casas decimais: 0,08.']],r:'números decimais operações'},
     porcentagem:{j:'Ache sempre os 10% primeiro (dividir por 10) e monte o resto a partir dele: 20% é o dobro, 5% é a metade, 30% é o triplo.',e:[['30% de 70','10% = 7, então 30% = 21.'],['Preço R$ 250 com 15% de desconto','10% = 25; 5% = 12,50; 15% = 37,50. Paga 212,50.']],r:'porcentagem'},
@@ -953,16 +953,18 @@ PTX.maia.interpretacao.push(
 const emEtapas=()=>{ const m=maestria('jaquinho').fracoes_soma; return m.n<3 || m.m<.75; };
 const multiplosAte=(n,lim)=>{ const r=[]; for(let x=n;x<=lim;x+=n) r.push(x); return r.join(', '); };
 function etapasFracoes(){
-  let b,d,m; do{ b=rnd(2,10); d=rnd(2,10); m=lcm(b,d); }while(b===d || m>40);
-  const a=rnd(1,b-1), c=rnd(1,d-1), x=a*m/b, y=c*m/d, val=(n,dd)=>n/dd, certo=frac(x+y,m);
+  let b,d; do{ b=rnd(2,9); d=rnd(2,9); }while(b===d || b*d>45);
+  const a=rnd(1,b-1), c=rnd(1,d-1), x=a*d, y=c*b, m=b*d, certo=frac(x+y,m), val=(n,dd)=>n/dd;
   const conta=`${a}/${b} + ${c}/${d}`;
-  const e1={ q:`Etapa 1 de 3 — Para somar ${conta}, primeiro precisamos de um denominador comum. Qual é o MMC de ${b} e ${d}?`, ...mc(m,[b*d,b+d,Math.max(b,d),m*2]),
-    ex:`Múltiplos de ${b}: ${multiplosAte(b,m)}. Múltiplos de ${d}: ${multiplosAte(d,m)}. O primeiro em comum é ${m}.` };
-  const e2={ q:`Etapa 2 de 3 — Com o denominador ${m}, como fica ${conta}?`, ...mc(`${x}/${m} + ${y}/${m}`,[`${a}/${m} + ${c}/${m}`,`${a*(m/d)}/${m} + ${c*(m/b)}/${m}`,`${x}/${m} + ${c}/${m}`,`${a+m/b}/${m} + ${c+m/d}/${m}`],k=>`${x+k}/${m} + ${y+(k%2)}/${m}`),
-    ex:`${m} ÷ ${b} = ${m/b}, então ${a}/${b} = ${a}×${m/b} / ${m} = ${x}/${m}. ${m} ÷ ${d} = ${m/d}, então ${c}/${d} = ${y}/${m}. O que multiplica embaixo, multiplica em cima.` };
-  const erradas=[frac(x+y,2*m),frac(a+c,b+d),frac(x+y+1,m),frac(x+y,m+1),frac(Math.max(1,x+y-1),m)].filter(w=>{ const [n,dd]=(w+'/1').split('/').map(Number); return Math.abs(val(n,dd)-val(x+y,m))>1e-9; });
-  const e3={ q:`Etapa 3 de 3 — Agora é só somar: ${x}/${m} + ${y}/${m} = ? (simplifique se der)`, ...mc(certo,erradas,k=>frac(x+y+k+1,m)),
-    ex:`Com o mesmo denominador, soma só os de cima e mantém o de baixo: ${x} + ${y} = ${x+y} → ${x+y}/${m}${certo!==(x+y)+'/'+m?' = '+certo+' (simplificado)':''}.` };
+  const e1={ q:`Etapa 1 de 3 — Método borboleta em ${conta}. As asas: multiplique em cruz (o de cima de uma pelo de baixo da outra). Quais são as asas?`,
+    ...mc(`${x} e ${y}`,[`${a*b} e ${c*d}`,`${a*c} e ${m}`,`${a+d} e ${c+b}`,`${x} e ${c*d}`,`${a*b} e ${y}`],k=>`${x+k} e ${y}`),
+    ex:`Asa da esquerda: ${a} × ${d} = ${x}. Asa da direita: ${c} × ${b} = ${y}. É sempre em cruz: cima de uma × baixo da outra.` };
+  const e2={ q:`Etapa 2 de 3 — O corpo da borboleta: multiplique os de baixo de ${conta}. Quanto dá?`,
+    ...mc(m,[b+d,lcm(b,d)!==m?lcm(b,d):m+b,m+d,m*2]),
+    ex:`Corpo = ${b} × ${d} = ${m}. Ele vai ser o de baixo da resposta.` };
+  const erradas=[frac(x+y,b+d),frac(a+c,b+d),frac(a+c,m),frac(x+y+1,m),frac(Math.max(1,x+y-1),m),frac(x*y,m)].filter(w=>{ const [n,dd]=(w+'/1').split('/').map(Number); return Math.abs(val(n,dd)-val(x+y,m))>1e-9; });
+  const e3={ q:`Etapa 3 de 3 — Some as asas (${x} + ${y}) e coloque em cima do corpo (${m}). Qual é o resultado de ${conta}? (simplifique se der)`, ...mc(certo,erradas,k=>frac(x+y+k+1,m)),
+    ex:`${x} + ${y} = ${x+y} → ${x+y}/${m}${certo!==(x+y)+'/'+m?' = '+certo+' (dividindo em cima e embaixo pelo mesmo número)':''}.` };
   return [e1,e2,e3].map((g,i)=>({skill:'fracoes_soma',qid:'fracoes_soma-e'+(i+1),q:g.q,options:g.options,a:g.a,ex:g.ex,etapa:i+1}));
 }
 
@@ -1294,7 +1296,7 @@ function telaQuestao(){
   const opts=q.options.map((o,j)=>{ let cls=''; if(resp!=null){ if(sim){ if(j===resp) cls='sel'; } else { if(j===q.a) cls='ok'; else if(j===resp) cls='no'; } }
     if(resp==null && run.pend===j) cls='pend';
     return `<button class="opt ${cls}" id="opt-${j}" data-j="${j}" ${resp!=null?'disabled':''}><span class="l">${letras[j]}</span><span>${esc(o)}</span></button>`; }).join('');
-  const pressa = resp==null && run.pend!=null ? `<div class="pressa" role="status" id="pressa">Opa, foi rápido demais! ${kid==='maia'?'Leu tudo com calma, linda?':'Leu o enunciado inteiro?'} Se tiver certeza, toque de novo na mesma resposta. Se não, troque.</div>` : '';
+  const pressa = resp==null && run.avisado ? `<div class="pressa" role="status" id="pressa">Opa, foi rápido demais! ${kid==='maia'?'Leu tudo com calma, linda?':'Leu o enunciado inteiro?'} Se tiver certeza, toque em Confirmar de novo. Se não, troque a alternativa.</div>` : '';
   let fb=''; if(resp!=null && !sim){ const ok=resp===q.a; fb=`<div class="feedback ${ok?'ok':'no'}" role="status"><b>${esc(ok?pick(K.vivas):pick(K.forca))}</b><span>${esc(q.ex)}</span>${q.temGemea?'<span><strong>Agora vem uma gêmea:</strong> uma questão parecida, para fixar o jeito certo.</span>':''}</div>`; }
   const titulo = sim ? 'Simulado' : run.tipo==='refazer' ? 'Refazendo' : run.tipo==='pratica' ? 'Praticando' : '';
   return `<section class="card">
@@ -1303,6 +1305,7 @@ function telaQuestao(){
     ${q.texto?`<div class="texto">${esc(q.texto)}</div>`:''}
     <p class="qtext">${esc(q.q)}</p>
     <div class="opts">${opts}</div>
+    ${resp==null?`<div class="row"><button class="btn" id="confirmar" ${run.pend==null?'disabled':''}>${run.pend==null?'Escolha uma alternativa':'Confirmar resposta'}</button></div>`:''}
     ${pressa}${fb}
     ${resp!=null?`<div class="row"><button class="btn" id="next">${run.i+1<run.qs.length?'Próxima':'Ver resultado'}</button></div>`:''}
   </section>`;
@@ -1364,11 +1367,22 @@ function precisaReforco(k){
   for(const sk of Object.keys(SKILLS[k])){ const l=itemsDe(k).filter(i=>i.skill===sk).slice(-8); if(l.some(i=>!i.ok && diasEntre(i.date,hoje)<=14) || (m[sk].n>=3 && m[sk].m<.6)) out.add(sk); }
   return out;
 }
+/* Busca na tela Para estudar: filtra os assuntos pelo nome e pelo conteúdo (sem diferenciar acentos e maiúsculas). */
+const raizes=t=>semAcento(t).split(/[^a-z0-9]+/).filter(Boolean).map(w=>w.length>3?w.replace(/(oes|aes)$/,'ao').replace(/ns$/,'m').replace(/s$/,''):w).join(' ');   // "frações" acha "fração", "vírgulas" acha "vírgula"
+function filtrarEstudo(){
+  const q=raizes(document.getElementById('busca-estudo')?.value||''), area=document.querySelector('[data-area][aria-pressed="true"]')?.dataset.area||'todos';
+  let n=0; document.querySelectorAll('article.lesson[data-busca]').forEach(a=>{ const ok=(!q || q.split(' ').every(w=>a.dataset.busca.includes(w))) && (area==='todos' || a.dataset.areaSk===area); a.hidden=!ok; if(ok) n++; });
+  const m=document.getElementById('busca-vazio'); if(m) m.hidden=n>0;
+}
+function areaEstudo(b){ document.querySelectorAll('[data-area]').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false')); filtrarEstudo(); }
 function telaEstudar(focoSk){
   const f=new Set(focoSk||foco(kid,3)), pr=precisaReforco(kid); (focoSk||[]).forEach(s=>pr.add(s));
   const ordem=[...Object.keys(LICOES[kid])].sort((a,b)=>((f.has(b)?2:0)+(pr.has(b)?1:0))-((f.has(a)?2:0)+(pr.has(a)?1:0)));
-  return `<section class="card"><h2>Para estudar</h2><p class="muted">Os assuntos com borda colorida são o foco agora. Leia o resumo, abra a "Explicação completa" para ver o passo a passo e os exemplos, resolva o desafio no caderno e depois pratique só aquele assunto. Assunto que você errou há pouco ganha um quadro extra com outro jeito de explicar.</p></section>
-  <div class="grid2">${ordem.map(sk=>{ const [t,txt,ex,dica]=LICOES[kid][sk]; const D=DET[kid][sk]; return `<article class="lesson ${f.has(sk)?'focus':''}"><span class="tag" style="align-self:flex-start">${SKILLS[kid][sk].mat?'Matemática':'Português'} · ${SKILLS[kid][sk].nome}</span><h3>${esc(t)}</h3><p>${esc(txt)}</p><div class="ex">${esc(ex)}</div><p class="dica">Dica: ${esc(dica)}</p>
+  return `<section class="card"><h2>Para estudar</h2><p class="muted">Os assuntos com borda colorida são o foco agora. Leia o resumo, abra a "Explicação completa" para ver o passo a passo e os exemplos, resolva o desafio no caderno e depois pratique só aquele assunto. Assunto que você errou há pouco ganha um quadro extra com outro jeito de explicar.</p>
+    <input id="busca-estudo" type="search" placeholder="Buscar assunto (ex.: ${kid==='maia'?'troco, divisão, vírgula':'frações, MMC, acento'})" autocomplete="off" oninput="filtrarEstudo()" aria-label="Buscar assunto" style="width:100%;font:600 16px var(--font-body);padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)">
+    <div class="seg" role="group" aria-label="Filtrar por matéria"><button data-area="todos" aria-pressed="true" onclick="areaEstudo(this)">Todos</button><button data-area="mat" aria-pressed="false" onclick="areaEstudo(this)">Matemática</button><button data-area="port" aria-pressed="false" onclick="areaEstudo(this)">Português</button></div>
+    <p class="muted" id="busca-vazio" hidden>Nenhum assunto encontrado. Tente outra palavra.</p></section>
+  <div class="grid2">${ordem.map(sk=>{ const [t,txt,ex,dica]=LICOES[kid][sk]; const D=DET[kid][sk]; const busca=raizes([SKILLS[kid][sk].nome,t,txt,ex,dica,...(D?D.p:[]),DET2[kid][sk]?.r||''].join(' ')); return `<article class="lesson ${f.has(sk)?'focus':''}" data-busca="${esc(busca)}" data-area-sk="${SKILLS[kid][sk].mat?'mat':'port'}"><span class="tag" style="align-self:flex-start">${SKILLS[kid][sk].mat?'Matemática':'Português'} · ${SKILLS[kid][sk].nome}</span><h3>${esc(t)}</h3><p>${esc(txt)}</p><div class="ex">${esc(ex)}</div><p class="dica">Dica: ${esc(dica)}</p>
     ${D?`<details class="mais" id="det-${sk}"><summary>Explicação completa</summary>
       <h4>Passo a passo</h4><ol>${D.p.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
       <h4>Exemplos resolvidos</h4>${D.e.map(([q,r])=>`<div class="ex"><strong>${esc(q)}</strong><br>${esc(r)}</div>`).join('')}
@@ -1406,7 +1420,7 @@ function telaPainel(){
       <div class="row"><span class="pill">${nS} ${nS===1?'treino':'treinos'}</span><span class="pill">${sequencia(k)} ${sequencia(k)===1?'dia seguido':'dias seguidos'}</span><span class="pill">Mat ${acerto(k,true)??'—'}%</span><span class="pill">Port ${acerto(k,false)??'—'}%</span>${ult?`<span class="pill">Último: ${ult.date.slice(8)}/${ult.date.slice(5,7)}</span>`:''}</div>
       ${(()=>{ const rv=devidos(k).length, sims=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts).slice(0,5); return `<p>Reforço pendente: <strong>${rv}</strong> ${rv===1?'questão':'questões'} que ${K.nome} errou e que voltam nos próximos treinos.</p>${sims.length?`<p>Simulados: ${sims.map(x=>`${x.date.slice(8)}/${x.date.slice(5,7)} → <strong>${x.score}/${x.items.length}</strong> (${Math.round(100*x.score/x.items.length)}%)`).join(' · ')}</p>`:'<p class="muted">Nenhum simulado completo ainda.</p>'}`; })()}
       ${k==='maia'?`<p>Troco em degraus: Maya está no <strong>degrau ${degrauTroco()} de 3</strong> (1 = reais inteiros · 2 = ,00 e ,50 · 3 = centavos quebrados). Sobe com 4 acertos seguidos.</p><p>Divisão em degraus: Maya está no <strong>degrau ${degrauDe('divisao')} de 4</strong> (1 = ÷2 a ÷5 · 2 = ÷6 a ÷9 · 3 = com resto · 4 = resultado com 2 algarismos). Sobe com 4 acertos seguidos; desce com 3 erros seguidos.</p>`:''}
-      ${k==='jaquinho'?(()=>{ const it=itemsDe(k).filter(i=>i.e), nm=['MMC','converter','somar']; return `<p>Soma de frações ${emEtapas()?'<strong>em 3 etapas</strong> (até ficar verde)':'já dominada: voltou ao formato normal'}.${it.length?' Acerto por etapa: '+[1,2,3].map(e=>{ const l=it.filter(i=>i.e===e); return `${nm[e-1]} ${l.length?Math.round(100*l.filter(i=>i.ok).length/l.length)+'% ('+l.length+')':'—'}`; }).join(' · ')+'.':''}</p>`; })():''}
+      ${k==='jaquinho'?(()=>{ const it=itemsDe(k).filter(i=>i.e), nm=['asas (cruz)','corpo (baixo)','somar']; return `<p>Soma de frações ${emEtapas()?'<strong>em 3 etapas</strong> (até ficar verde)':'já dominada: voltou ao formato normal'}.${it.length?' Acerto por etapa: '+[1,2,3].map(e=>{ const l=it.filter(i=>i.e===e); return `${nm[e-1]} ${l.length?Math.round(100*l.filter(i=>i.ok).length/l.length)+'% ('+l.length+')':'—'}`; }).join(' · ')+'.':''}</p>`; })():''}
       ${textoRevisao(k)}
       <p>Conquistas: ${medalhas(k).lista.map(x=>`${x.nome} ${x.ok?'✓':'('+x.prog+')'}`).join(' · ')}.</p>
       ${tabelaDias(k)}
@@ -1431,9 +1445,14 @@ function ligar(){
   $('#start')?.addEventListener('click',()=>novaRun('treino'));
   document.querySelectorAll('.pratica').forEach(b=>b.addEventListener('click',()=>{ iniciarRun(montarPratica(kid,b.dataset.sk),'pratica'); view='treino'; render(); window.scrollTo({top:0}); }));
   $('#simulado')?.addEventListener('click',()=>novaRun('simulado'));
+  /* Tocar numa alternativa só marca; a resposta vale ao tocar em "Confirmar resposta" (evita toque sem querer no tablet). */
   document.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>{
-    if(run.resp[run.i]!=null) return; const j=+b.dataset.j, dt=(Date.now()-run.qT0)/1000;
-    if(dt<limPressa(run.qs[run.i]) && run.pend!==j){ run.pend=j; run.rap[run.i]=true; render(); return; }   // freio de pressa: pede para confirmar
+    if(run.resp[run.i]!=null) return; run.pend=+b.dataset.j; render(); $('#confirmar')?.focus();
+  }));
+  $('#confirmar')?.addEventListener('click',()=>{
+    if(run.resp[run.i]!=null || run.pend==null) return; const j=run.pend, dt=(Date.now()-run.qT0)/1000;
+    if(dt<limPressa(run.qs[run.i]) && !run.avisado){ run.avisado=true; run.rap[run.i]=true; render(); return; }   // freio de pressa: pede para confirmar de novo
+    run.avisado=false;
     run.resp[run.i]=j; run.tq[run.i]=Math.round(dt*10)/10; run.pend=null;
     const q=run.qs[run.i];
     /* Errou no treino ou na prática: entra logo depois uma questão gêmea (mesmo assunto, outros números). Até 3 por treino. */
@@ -1445,10 +1464,10 @@ function ligar(){
     }
     if(run.tipo!=='simulado') (j===q.a?somAcerto:somErro)();
     render(); $('#next')?.focus();
-  }));
+  });
   $('#antes-ok')?.addEventListener('click',()=>{ run.antesOk=run.antesOk||{}; run.antesOk[run.i]=1; run.qT0=Date.now(); render(); window.scrollTo({top:0}); });
   $('#next')?.addEventListener('click',async()=>{
-    if(run.i+1<run.qs.length){ run.i++; run.qT0=Date.now(); run.pend=null; render(); window.scrollTo({top:0}); return; }
+    if(run.i+1<run.qs.length){ run.i++; run.qT0=Date.now(); run.pend=null; run.avisado=false; render(); window.scrollTo({top:0}); return; }
     run.dur=Math.round((Date.now()-run.t0)/1000);
     if(run.tipo==='refazer'){ run.fim=true; render(); return; }
     const antesMed=medalhasOk(kid), antesMeta=metaFamilia(), jaTinhaHoje=sessions.some(x=>x.kid===kid&&x.date===today()&&!x.parcial&&x.id!==run.id);
