@@ -260,7 +260,7 @@ const GEN = {
         const pulos=Array.from({length:q},(_,i)=>N(d*(i+1))).join(', ');
         return { q:ctx(n,d), ...mc(q,[q+1,q-1,q+2,n-d]),
           ex: nv===1 ? `Conte de ${d} em ${d} até chegar a ${n}: ${pulos}. Foram ${q} pulos, então ${n} ÷ ${d} = ${q}. Confira: ${d} × ${q} = ${n}.`
-                     : `É a tabuada do ${d} ao contrário: ${d} × ${q} = ${n}, então ${n} ÷ ${d} = ${q}. Se não lembrar, conte de ${d} em ${d}: ${pulos}. Foram ${q} pulos. Atalho: comece em ${d} × 5 = ${d*5} e vá somando ou tirando ${d}.` };
+                     : `É a tabuada do ${d} ao contrário: ${d} × ${q} = ${n}, então ${n} ÷ ${d} = ${q}. Se não lembrar, comece em ${d} × 5 = ${d*5} e vá somando ou tirando ${d}.` };
       }
       if(nv===3){
         const d=rnd(3,9), q=rnd(3,L>=5?12:9), r=rnd(1,d-1), n=d*q+r;
@@ -285,9 +285,7 @@ const GEN = {
       let p;
       if(nv===1) p = rnd(2, L>=5?45:18)*100;                                   // degrau 1: só reais inteiros
       else if(nv===2) p = rnd(2, L>=5?45:18)*100 + pick([0,50,50]);           // degrau 2: ,00 ou ,50
-      else if(nv===2.5) p = rnd(L>=5?5:2, L>=5?45:18)*100 + rnd(1,9)*10;      // degrau 2.5 (v17): centavos redondos, ,10 a ,90
       else p = rnd(L>=5?520:150, L>=5?4790:1890);                             // degrau 3: centavos quebrados
-      if(nv>=2.5) return trocoEmPassos(p, nv===2.5 ? [5,10,20,50,100].find(n=>n*100>p) : [5,10,20,50,100].find(n=>n*100>p+40));
       if(nv<3){ const nota=[5,10,20,50,100].find(n=>n*100>p); const t=nota*100-p;
         return { q:`${pick(['Um batom','Um esmalte','Um pastel','Uma tiara','Um sorvete','Um vasinho na loja da mamãe','Um brinquedo para o James'])} custou ${reais(p)}. Pagando com uma nota de ${reais(nota*100).replace(',00','')}, qual é o troco?`, ...mc(reais(t),[reais(t+100),reais(t-100),reais(t+200),reais(t+50),reais(t-50)]),
           ex: nv===1 ? `Conte nos dedos a partir do preço até a nota: de ${reais(p)} até ${reais(nota*100)} faltam ${reais(t)}. Troco = ${reais(nota*100)} − ${reais(p)} = ${reais(t)}.` : `Complete primeiro até o real inteiro e depois até a nota: ${reais(nota*100)} − ${reais(p)} = ${reais(t)}.` }; }
@@ -866,276 +864,6 @@ function bancoPT(k){
   return BANCO_PT[k]={lista,map};
 }
 
-/* ================= v17 (18/11) — NÍVEL PROVA =================
-   Regras (as mesmas que aparecem no Painel do pai e na tela inicial):
-   1) Modo prova: simulado com TODAS as questões de Matemática no nível prova e, em Português, as questões novas mais difíceis
-      e as que a criança mais errou. Tem tempo-limite (Maya 40 min, Jaquinho 60 min). Acabou o tempo, as que ficaram
-      em branco contam como erro, igual na prova. Fica salvo como simulado (a revisão do simulado vale para ele também).
-   2) Nos treinos e práticas: assunto de Matemática com 11 ou 12 acertos nas últimas 12 ("dominado") passa a ter metade das
-      questões no nível prova (etiqueta "Nível prova"). Se o acerto cair, volta sozinho ao nível normal.
-      Troco e divisão da Maya só entram no nível prova depois do último degrau. */
-const PROVA_MIN={maia:40, jaquinho:60};
-const PROVA_PT=new Set();
-function addPTX(k,sk,lista){ const L=PTX[k][sk]||(PTX[k][sk]=[]); lista.forEach(it=>{ PROVA_PT.add(k+'-ptx-'+sk+'-'+L.length); L.push(it); }); }
-const ehProva=s=>s.items.some(i=>i.p);
-const durTxt=m=>{ const h=Math.floor(m/60), mm=m%60; return h ? h+' h'+(mm?' '+mm+' min':'') : mm+' min'; };
-const SUP={0:'⁰',1:'¹',2:'²',3:'³',4:'⁴',5:'⁵',6:'⁶',7:'⁷',8:'⁸',9:'⁹'};
-const sup=n=>String(n).split('').map(c=>SUP[c]).join('');
-const nomeFr=d=>({2:'a metade',3:'a terça parte',4:'a quarta parte',5:'a quinta parte'})[d];
-const cap=s=>s[0].toUpperCase()+s.slice(1);
-const cent5=(a,b)=>Math.round(rnd(a,b)/5)*5;
-
-/* Troco ensinado em passos (degraus 2.5 e 3 da Maya): primeiro completa até o real inteiro, depois até a nota. */
-function trocoEmPassos(p,nota){
-  const t=nota*100-p, ate=Math.ceil(p/100)*100, c1=ate-p, c2=nota*100-ate;
-  const semEmprestar = (nota*100 - Math.floor(p/100)*100) - 100 + (p%100);   // erro comum: 10,00 − 7,30 = 3,30
-  const item=pick(['Um batom','Um esmalte','Um pastel','Uma tiara','Um sorvete','Um vasinho na loja da mamãe','Um brinquedo para o James']);
-  return { q:`${item} custou ${reais(p)}. Pagando com uma nota de R$ ${nota}, qual é o troco?`, ...mc(reais(t),[reais(t+100),reais(semEmprestar),reais(t+10),reais(t-10)]),
-    ex:`Faça em dois pulos. 1º: de ${reais(p)} até ${reais(ate)} faltam ${reais(c1)}. 2º: de ${reais(ate)} até ${reais(nota*100)} faltam ${reais(c2)}. Troco: ${reais(c1)} + ${reais(c2)} = ${reais(t)}.` };
-}
-
-const GENP = {
-  maia: {
-    valor_posicional(L){
-      if(L>=5){ const dm=rnd(1,8), um=rnd(1,8), c=rnd(11,19), u=rnd(1,9), n=dm*10000+um*1000+c*100+u;
-        return { q:`Qual número tem ${dm} dezenas de milhar, ${um} unidades de milhar, ${c} centenas e ${u} unidades?`, ...mc(N(n),[N(+`${dm}${um}${c}0${u}`),N(n-1000),N(n+100)]),
-          ex:`${c} centenas = 1 unidade de milhar e ${c%10} ${c%10===1?'centena':'centenas'}. Juntando: ${N(dm*10000)} + ${N(um*1000)} + ${N(c*100)} + ${u} = ${N(n)}.` }; }
-      const um=rnd(2,8), c=rnd(11,19), d=rnd(1,9), u=rnd(1,9), n=um*1000+c*100+d*10+u;
-      return { q:`Qual número tem ${um} unidades de milhar, ${c} centenas, ${d} dezenas e ${u} unidades?`, ...mc(N(n),[N(+`${um}${c}${d}${u}`),N(n-1000),N(n+100)]),
-        ex:`Cuidado: ${c} centenas = 1 unidade de milhar e ${c-10} ${c-10===1?'centena':'centenas'}. Juntando: ${N(um*1000)} + ${N(c*100)} + ${d*10} + ${u} = ${N(n)}.` };
-    },
-    adicao(L){
-      const a=L>=5?rnd(1200,3999):rnd(150,599), b=L>=5?rnd(1500,3999):rnd(200,699), z=L>=5?rnd(120,900):rnd(20,140), c=b-z, r=a+b+c;
-      return { q:`Na loja da mamãe foram vendidas ${N(a)} flores na sexta e ${N(b)} no sábado. No domingo venderam ${N(z)} flores a menos que no sábado. Quantas flores foram vendidas nos três dias?`, ...mc(N(r),[N(a+b+z),N(a+b),N(a+2*b),N(r+100)]),
-        ex:`Primeiro o domingo: ${N(b)} − ${N(z)} = ${N(c)}. Depois os três dias: ${N(a)} + ${N(b)} + ${N(c)} = ${N(r)}. "A menos" pede uma subtração antes da soma.` };
-    },
-    subtracao(L){
-      const a=(L>=5?rnd(4,9):rnd(2,6))*1000+pick([0,0,3,5]); let b; do{ b=rnd(Math.floor(a/4),a-150); }while(b%10<=a%10);
-      const r=a-b; const A=String(a),B=String(b).padStart(A.length,'0'); let w=''; for(let k=0;k<A.length;k++) w+=Math.abs(+A[k]-+B[k]);
-      return { q:pick([`A Maya quer juntar ${N(a)} pontos no jogo. Já tem ${N(b)}. Quantos pontos faltam?`,`A escola precisa arrecadar ${N(a)} tampinhas. Já arrecadou ${N(b)}. Quantas faltam?`]), ...mc(N(r),[N(+w),N(r+100),N(r-10),N(r+1000)]),
-        ex:`${N(a)} − ${N(b)} = ${N(r)}. Quando há zeros em cima, o empréstimo "atravessa" os zeros até achar um número para emprestar. Confira somando: ${N(r)} + ${N(b)} = ${N(a)}.` };
-    },
-    multiplicacao(L){
-      const f=L>=5?rnd(4,8):rnd(3,5), g=L>=5?rnd(6,12):rnd(4,8), a=L>=5?rnd(3,9):rnd(3,6), cx=f*g, r=cx*a;
-      const [u1,uN,q1]=pick([['caixa','caixas',`Uma caixa de bombons tem ${f} fileiras com ${g} bombons em cada. Quantos bombons há em ${a} caixas?`],['bandeja','bandejas',`Na loja da mamãe, cada bandeja tem ${f} fileiras com ${g} vasinhos. Quantos vasinhos há em ${a} bandejas?`]]);
-      return { q:q1, ...mc(r,[cx+a,(f+g)*a,cx*(a+1),r-g]),
-        ex:`Uma ${u1}: ${f} × ${g} = ${cx}. ${a} ${uN}: ${cx} × ${a} = ${r}. São duas multiplicações, uma depois da outra.` };
-    },
-    divisao(L){
-      const d=pick(L>=5?[6,7,8,9]:[4,5,6,8]), k=rnd(3,L>=5?12:9), r=rnd(1,d-1), n=d*k+r;
-      if(Math.random()<.5) return { q:`${n} alunos vão ao passeio em vans de ${d} lugares. Quantas vans são precisas, no mínimo, para levar todo mundo?`, ...mc(k+1,[k,r,k+2,k-1]),
-        ex:`${n} ÷ ${d} = ${k} e ${r===1?'sobra 1':'sobram '+r}. ${r===1?'Esse aluno também precisa':'Esses '+r+' alunos também precisam'} ir, então é mais uma van: ${k} + 1 = ${k+1}. Na prova, pense no que o resto significa!` };
-      return { q:`A Maya tem ${n} figurinhas e vai guardar em pacotinhos de ${d}. Quantos pacotinhos ficam completos?`, ...mc(k,[k+1,r,k-1,k+2]),
-        ex:`${n} ÷ ${d} = ${k} e ${r===1?'sobra 1':'sobram '+r}. ${r===1?'A que sobra não completa':'As '+r+' que sobram não completam'} um pacotinho, então são ${k} pacotinhos completos.` };
-    },
-    fracoes(L){
-      const a=pick(L>=5?[2,3,4,5]:[2,3,4]), b=pick([2,3]), N0=a*b*rnd(2,L>=5?6:4), p1=N0/a, rest=N0-p1, p2=rest/b, left=rest-p2;
-      return { q:`A Maya tinha ${N0} adesivos. Deu ${nomeFr(a)} deles para a prima e, do que sobrou, deu ${nomeFr(b)} para uma amiga. Com quantos adesivos ela ficou?`, ...mc(left,[N0-p1-N0/b,rest,p1,p2]),
-        ex:`${cap(nomeFr(a))} de ${N0} = ${p1}. Sobraram ${N0} − ${p1} = ${rest}. ${cap(nomeFr(b))} de ${rest} = ${p2}. Ficou com ${rest} − ${p2} = ${left}. Atenção: a segunda parte é do que SOBROU, não do total.` };
-    },
-    dinheiro(L){
-      const [i1,i2]=pick([['esmaltes','um batom'],['pastéis','um suco'],['tiaras','um espelhinho'],['sorvetes','uma água'],['vasinhos','um laço']]);
-      const p1=cent5(L>=5?250:150,L>=5?990:690), p2=cent5(L>=5?300:150,L>=5?1290:790), qt=pick([2,3]), tot=qt*p1+p2, nota=[10,20,50,100].find(n=>n*100>tot), t=nota*100-tot;
-      return { q:`A Maya comprou ${qt} ${i1} de ${reais(p1)} cada e ${i2} de ${reais(p2)}. Pagou com uma nota de R$ ${nota}. Qual foi o troco?`, ...mc(reais(t),[reais(nota*100-p1-p2),reais(t+100),reais(t+10),reais(t-10)]),
-        ex:`${qt} × ${reais(p1)} = ${reais(qt*p1)}. Com ${i2}: ${reais(qt*p1)} + ${reais(p2)} = ${reais(tot)}. Troco: ${reais(nota*100)} − ${reais(tot)} = ${reais(t)}. Não esqueça de multiplicar pela quantidade!` };
-    },
-    tempo(L){
-      const ini=rnd(7,16)*60+pick([5,10,20,25,35,40,50,55]), dur=pick(L>=5?[65,75,85,95,105,125,135]:[50,55,65,75,85,95]), fim=ini+dur;
-      const h1=Math.floor(ini/60)*100+ini%60, h2=Math.floor(fim/60)*100+fim%60, x=h2-h1, cem=Math.floor(x/100)*60+x%100;
-      if(Math.random()<.55) return { q:`O ensaio de órgão começou às ${hora(ini)} e terminou às ${hora(fim)}. Quanto tempo durou?`, ...mc(durTxt(dur),[x%100<60&&cem!==dur?durTxt(cem):durTxt(dur+40),durTxt(dur+10),durTxt(dur-10),durTxt(dur+60)],null),
-        ex:`Conte em pulos: de ${hora(ini)} até ${hora(Math.ceil(ini/60)*60)} são ${Math.ceil(ini/60)*60-ini} min; de ${hora(Math.ceil(ini/60)*60)} até ${hora(fim)} são ${fim-Math.ceil(ini/60)*60} min. Total: ${dur} min${dur>=60?' = '+durTxt(dur):''}. Lembre: a hora tem 60 minutos, não 100.` };
-      return { q:`A Maya começou a estudar às ${hora(ini)} e estudou por ${durTxt(dur)}. A que horas terminou?`, ...mc(hora(fim),[hora(fim+10),hora(fim-10),hora(fim+60),hora(fim-60)],null),
-        ex:`${durTxt(dur)} = ${dur} minutos. ${hora(ini)} + ${dur} min = ${hora(fim)}. Quando os minutos passam de 60, vira mais uma hora.` };
-    },
-    perimetro(L){
-      if(Math.random()<.45){ const l=rnd(3,15), P=4*l;
-        return { q:`Uma mesa quadrada tem ${P} dm de perímetro. Quanto mede cada lado?`, ...mc(l+' dm',[P/2+' dm',(P-4)+' dm',2*l+' dm',(l+1)+' dm']),
-          ex:`O quadrado tem 4 lados iguais. ${P} ÷ 4 = ${l} dm.` }; }
-      const c=rnd(6,15), w=rnd(2,c-1), P=2*(c+w);
-      return { q:`Um canteiro retangular tem ${P} m de perímetro. O comprimento mede ${c} m. Quanto mede a largura?`, ...mc(w+' m',[(P-c)+' m',(P-2*c)+' m',(P/4%1?w+1:P/4)+' m',(w+2)+' m']),
-        ex:`Perímetro = comprimento + largura + comprimento + largura. ${P} − ${c} − ${c} = ${P-2*c}: são as duas larguras juntas. Uma largura: ${P-2*c} ÷ 2 = ${w} m.` };
-    }
-  },
-  jaquinho: {
-    expressoes(){
-      if(Math.random()<.5){ const e=rnd(2,5), k=rnd(2,6), b=e*k, df=rnd(2,4), d=rnd(1,9), c=d+df, a=rnd(5,30), r=a+k*df*df;
-        return { q:`Quanto vale ${a} + [${b} × (${c} − ${d})²] ÷ ${e}?`, ...mc(r,[a+k*df*2,(a+b*df*df)%e===0?(a+b*df*df)/e:r+df,r+e,r-k]),
-          ex:`Ordem: parênteses → potência → colchetes → × e ÷ → + e −. (${c} − ${d}) = ${df}; ${df}² = ${df*df}; ${b} × ${df*df} = ${b*df*df}; ÷ ${e} = ${k*df*df}; ${a} + ${k*df*df} = ${r}.` }; }
-      const a=rnd(2,6), b=rnd(2,6), c=rnd(1,a+b-1), r=(a+b)**2-c*c;
-      return { q:`Quanto vale (${a} + ${b})² − ${c}²?`, ...mc(r,[a*a+b*b-c*c,(a+b-c)**2,2*(a+b)-2*c,r+c]),
-        ex:`Primeiro o parênteses: ${a} + ${b} = ${a+b}. Depois as potências: ${a+b}² = ${(a+b)**2} e ${c}² = ${c*c}. ${(a+b)**2} − ${c*c} = ${r}. Cuidado: (${a} + ${b})² não é ${a}² + ${b}².` };
-    },
-    potencias(){
-      const t=rnd(1,4);
-      if(t===1){ let m,n; do{ m=rnd(2,5); n=rnd(3,6); }while(m*n===m+n); const b=pick([2,3,5,7]);
-        return { q:`Escrevendo como uma só potência, ${b}${sup(m)} × ${b}${sup(n)} é igual a…`, ...mc(b+sup(m+n),[b+sup(m*n),(b*b)+sup(m+n),(b*b)+sup(m*n)],null),
-          ex:`Multiplicação de potências de mesma base: conserva a base e SOMA os expoentes. ${b}${sup(m)} × ${b}${sup(n)} = ${b}${sup(m+n)}.` }; }
-      if(t===2){ const x=rnd(2,9), y=rnd(2,9);
-        return { q:`Quanto é ${x}² + ${y}²?`, ...mc(x*x+y*y,[(x+y)**2,2*x+2*y,(x+y)*2+1,x*x+y]),
-          ex:`Calcule cada potência separado: ${x}² = ${x*x} e ${y}² = ${y*y}. Soma: ${x*x+y*y}. Não é (${x} + ${y})² = ${(x+y)**2}.` }; }
-      if(t===3){ const n=rnd(11,20);
-        return { q:`Quanto é a raiz quadrada de ${n*n} (√${n*n})?`, ...mc(n,[n+1,n-1,n*n/2%1?n+2:n*n/2,2*n]),
-          ex:`Raiz quadrada é o número que, vezes ele mesmo, dá ${n*n}: ${n} × ${n} = ${n*n}.` }; }
-      const e=rnd(3,7);
-      return { q:`Quanto é 10${sup(e)}?`, ...mc(N(10**e),[N(10*e),N(10**(e-1)),N(10**(e+1))]),
-        ex:`10${sup(e)} é 1 seguido de ${e} zeros: ${N(10**e)}. Não é 10 × ${e}.` };
-    },
-    mmc_mdc(){
-      const t=rnd(1,3);
-      if(t===1){ const [a,b,c]=pick([[2,3,4],[3,4,6],[4,6,8],[2,5,6],[3,5,6],[4,5,6],[6,8,12],[3,4,5],[4,6,9]]), r=lcm(lcm(a,b),c), mx=Math.max(a,b,c);
-        return { q:`Três luzes da árvore de Natal piscaram juntas agora. Uma pisca a cada ${a} segundos, outra a cada ${b} e outra a cada ${c}. Daqui a quantos segundos vão piscar juntas de novo?`, ...mc(r,[a*b*c,r*2,lcm(a,b)===r?r+mx:lcm(a,b),a+b+c]),
-          ex:`É o MMC de ${a}, ${b} e ${c}. Vá pelos múltiplos do maior (${mx}): ${[1,2,3,4,5].map(i=>mx*i).filter(v=>v<=r).join(', ')}… O primeiro que é múltiplo dos três é ${r}.` }; }
-      const g=pick([6,8,12,14,15,18]); let ka,kb; do{ ka=rnd(2,7); kb=rnd(2,7); }while(ka===kb||gcd(ka,kb)>1); const A=g*ka, B=g*kb;
-      if(t===2) return { q:`A mamãe tem uma fita de ${A} cm e outra de ${B} cm. Quer cortar as duas em pedaços iguais, do maior tamanho possível, sem sobrar nada. Quantos pedaços vai ter no total?`, ...mc(ka+kb,[g,ka*kb,ka+kb+2,lcm(A,B)/g]),
-        ex:`O tamanho do pedaço é o MDC de ${A} e ${B} = ${g} cm. Pedaços: ${A} ÷ ${g} = ${ka} e ${B} ÷ ${g} = ${kb}. Total: ${ka} + ${kb} = ${ka+kb}. A pergunta era o número de pedaços, não o tamanho!` };
-      return { q:`Qual é o MDC de ${A} e ${B}?`, ...mc(g,[g%2?g+3:g/2,g*2,Math.abs(A-B)===g?g+1:Math.abs(A-B),lcm(A,B)]),
-        ex:`Divisores comuns de ${A} e ${B}: o maior é ${g}. Confira: ${A} ÷ ${g} = ${ka} e ${B} ÷ ${g} = ${kb}, e ${ka} e ${kb} não têm mais divisor comum além do 1.` };
-    },
-    fracoes_soma(){
-      const t=rnd(1,3);
-      if(t===1){ const [x,y]=pick([[3,4],[2,5],[4,6],[3,5],[4,5],[3,8],[2,7],[5,6]]), m=x*y, s=x+y, l=m-s;
-        return { q:`O Jaquinho gastou 1/${x} da mesada com cordas de violino e 1/${y} com um lanche. Que fração da mesada sobrou?`, ...mc(frac(l,m),[frac(s,m),frac(s-2,s),frac(1,m),frac(l+1,m)],null),
-          ex:`Gastou: 1/${x} + 1/${y} = ${y}/${m} + ${x}/${m} = ${frac(s,m)}. A mesada inteira é ${m}/${m}. Sobrou: ${m}/${m} − ${s}/${m} = ${frac(l,m)}.` }; }
-      if(t===2){ let a,b,c,d; do{ b=pick([2,3,4,5,6]); d=pick([2,3,4,5,6]); a=rnd(1,b-1); c=rnd(1,d-1); }while(b===d || a*d<=c*b); const n=a*d-c*b, m=b*d;
-        return { q:`Quanto é ${a}/${b} − ${c}/${d}?`, ...mc(frac(n,m),[frac(a*d+c*b,m),frac(Math.abs(a-c)||1,m),frac(n+1,m),frac(n,b+d),frac(n,m*2),frac(n+2,m),frac(n+3,m)],null),
-          ex:`Mesmo método da borboleta, mas subtraindo: (${a} × ${d} − ${c} × ${b})/(${b} × ${d}) = (${a*d} − ${c*b})/${m} = ${frac(n,m)}.` }; }
-      const ds=pick([[2,3,6],[2,4,8],[3,4,6],[2,5,10],[4,6,12],[2,3,4]]), m=ds.reduce(lcm), n=ds.reduce((s,d)=>s+m/d,0);
-      return { q:`Quanto é ${ds.map(d=>'1/'+d).join(' + ')}?`, ...mc(frac(n,m),[frac(3,ds[0]+ds[1]+ds[2]),frac(3,ds[0]*ds[1]*ds[2]),frac(n+1,m),frac(n,m*2)],null),
-        ex:`Ponha todas com o mesmo denominador (MMC = ${m}): ${ds.map(d=>(m/d)+'/'+m).join(' + ')} = ${n}/${m}${frac(n,m)!==n+'/'+m?' = '+frac(n,m):''}.` };
-    },
-    fracao_quantidade(){
-      if(Math.random()<.5){ const den=pick([3,4,5,6,8]); let num; do{ num=rnd(2,den-1); }while(gcd(num,den)>1); const N0=den*rnd(3,12), val=N0/den*num;
-        return { q:`${num}/${den} de um número é ${val}. Qual é esse número?`, ...mc(N0,[val*den,val+N0/den,N0/den*(den-num)||N0+1,val*num]),
-          ex:`Se ${num} partes valem ${val}, uma parte vale ${val} ÷ ${num} = ${N0/den}. O número inteiro tem ${den} partes: ${N0/den} × ${den} = ${N0}.` }; }
-      const den=pick([3,4,5]), num=rnd(1,den-1), N0=den*2*rnd(2,8), men=N0/den*num;
-      return { q:`Numa turma de ${N0} alunos, ${num}/${den} são meninas. Metade das meninas toca algum instrumento. Quantas meninas tocam instrumento?`, ...mc(men/2,[men,N0/2,N0-men,men/2+1]),
-        ex:`Meninas: ${N0} ÷ ${den} × ${num} = ${men}. Metade delas: ${men} ÷ 2 = ${men/2}.` };
-    },
-    decimais(){
-      const t=rnd(1,3);
-      if(t===1){ const q1=pick([2,3,4]), p1=cent5(250,1290), q2=pick([2,3]), p2=cent5(120,490), tot=q1*p1+q2*p2;
-        return { q:`O Jaquinho comprou ${q1} cadernos de ${reais(p1)} e ${q2} canetas de ${reais(p2)}. Quanto gastou?`, ...mc(reais(tot),[reais(p1+p2),reais(q1*p1+p2),reais(tot+100),reais(tot-10)]),
-          ex:`Cadernos: ${q1} × ${reais(p1)} = ${reais(q1*p1)}. Canetas: ${q2} × ${reais(p2)} = ${reais(q2*p2)}. Total: ${reais(tot)}.` }; }
-      if(t===2){ const d=pick([3,4,5,6,8]), k=cent5(105,990), X=d*k;
-        return { q:`Uma conta de ${reais(X)} foi dividida igualmente entre ${d} amigos. Quanto cada um pagou?`, ...mc(reais(k),[reais(k*10),reais(k+10),reais(k-10),reais(k+100)]),
-          ex:`${reais(X)} ÷ ${d} = ${reais(k)}. Confira: ${d} × ${reais(k)} = ${reais(X)}. Cuidado com a vírgula: o resultado tem que fazer sentido (cada um paga menos que o total).` }; }
-      const a=rnd(5,9), b=`0,${a-1}${rnd(5,9)}`, c=`0,${a-1}${rnd(0,9)}${rnd(1,9)}`, d=`0,0${rnd(1,9)}`;
-      return { q:'Qual destes números é o MAIOR?', ...mc(`0,${a}`,[b,c,d],null),
-        ex:`Compare casa por casa, da esquerda para a direita. 0,${a} tem ${a} décimos; os outros têm menos décimos. Ter mais casas depois da vírgula não deixa o número maior: 0,${a} = 0,${a}00.` };
-    },
-    porcentagem(){
-      const t=rnd(1,3);
-      if(t===1){ let pct,orig; do{ pct=pick([10,20,25,30,40,50]); orig=pick([40,60,80,120,150,200,250]); }while(orig*pct%100); const desc=orig*pct/100, novo=orig-desc;
-        return { q:`Um estojo de violino custava R$ ${orig} e passou a custar R$ ${novo}. De quantos por cento foi o desconto?`, ...mc(pct+'%',[desc+'%',(100-pct)+'%',(pct+5)+'%',Math.round(desc/novo*100)+'%'],null),
-          ex:`O desconto foi de R$ ${orig} − R$ ${novo} = R$ ${desc}. Em relação ao preço ANTIGO: ${desc} ÷ ${orig} = ${pct}/100 = ${pct}%.` }; }
-      if(t===2){ const orig=pick([100,200,300,400,500]), up=orig*110, fim=orig*99;   // em centavos
-        return { q:`Um produto de R$ ${orig},00 subiu 10%. Depois, o novo preço teve 10% de desconto. Quanto custa agora?`, ...mc(reais(fim),[reais(orig*100),reais(up),reais(orig*90)],null),
-          ex:`Subiu 10%: ${reais(orig*100)} + ${reais(orig*10)} = ${reais(up)}. Desconto de 10% sobre ${reais(up)}: ${reais(up)} − ${reais(up/10)} = ${reais(fim)}. Não volta ao preço antigo, porque o segundo 10% é de um valor maior.` }; }
-      let p,tot; do{ p=pick([5,12,15,35,45]); tot=pick([20,40,60,80,200,300]); }while(tot*p%100); const r=tot*p/100;
-      return { q:`Numa escola com ${tot} alunos, ${p}% tocam algum instrumento. Quantos alunos tocam?`, ...mc(r,[p,tot-r,r*10,r+1]),
-        ex:`${p}% de ${tot} = ${tot} × ${p} ÷ 100 = ${r}. Truque: 10% de ${tot} = ${tot/10}; 5% é a metade disso.` };
-    },
-    area(){
-      const t=rnd(1,3);
-      if(t===1){ const L=rnd(3,6), W=rnd(2,5), r=(2*L)*(2*W);
-        return { q:`Uma sala mede ${L} m por ${W} m. Quantos pisos quadrados de 50 cm de lado são precisos para cobrir o chão?`, ...mc(r,[L*W,L*W*2,4*(L+W),r/2+L]),
-          ex:`50 cm = 0,5 m, então em 1 m cabem 2 pisos. No comprimento: ${L} × 2 = ${2*L}; na largura: ${W} × 2 = ${2*W}. Total: ${2*L} × ${2*W} = ${r}.` }; }
-      if(t===2){ const A=rnd(8,14), B=rnd(6,10), a=rnd(2,A-4), b=rnd(2,B-3), r=A*B-a*b;
-        return { q:`Um terreno retangular de ${A} m por ${B} m perdeu um canto retangular de ${a} m por ${b} m para fazer um canteiro. Qual é a área que sobrou?`, ...mc(r+' m²',[A*B+' m²',(A*B+a*b)+' m²',(A-a)*(B-b)+' m²',2*(A+B)+' m²']),
-          ex:`Área inteira: ${A} × ${B} = ${A*B} m². Canto: ${a} × ${b} = ${a*b} m². Sobrou: ${A*B} − ${a*b} = ${r} m².` }; }
-      const w=rnd(3,9), h=rnd(2,8);
-      return { q:`Um retângulo mede ${w} cm por ${h} cm. Se os dois lados dobrarem de tamanho, o que acontece com a área?`, ...mc('fica 4 vezes maior',['fica 2 vezes maior','fica igual','fica 8 vezes maior'],null),
-        ex:`Antes: ${w} × ${h} = ${w*h} cm². Depois: ${2*w} × ${2*h} = ${4*w*h} cm². ${4*w*h} ÷ ${w*h} = 4. Dobrar os dois lados multiplica a área por 2 × 2 = 4.` };
-    },
-    divisibilidade(){
-      const t=rnd(1,3);
-      if(t===1){ let a,c,x; do{ a=rnd(1,9); c=rnd(0,9); x=(9-(a+c)%9)%9; }while(x<1||x>8);
-        const ws=new Set(); while(ws.size<3){ const w=rnd(0,9); if(w!==x && (a+w+c)%9) ws.add(w); }
-        return { q:`Qual algarismo deve ficar no lugar do ■ para que ${a}■${c} seja divisível por 9?`, ...mc(x,[...ws],null),
-          ex:`Divisível por 9: a soma dos algarismos tem que ser múltiplo de 9. ${a} + ${x} + ${c} = ${a+x+c}, que é múltiplo de 9.` }; }
-      if(t===2){ const [a,b]=pick([[3,4],[4,6],[2,7],[3,5],[5,6],[4,9],[6,8]]), L=lcm(a,b), r=Math.ceil(100/L)*L;
-        return { q:`Qual é o menor número de 3 algarismos que é divisível por ${a} e por ${b} ao mesmo tempo?`, ...mc(r,[r+L,r-L,100+a*b===r?r+1:100+a*b,a*b*10]),
-          ex:`Divisível por ${a} e por ${b} = múltiplo do MMC(${a}, ${b}) = ${L}. Múltiplos de ${L}: … ${r-L}, ${r}. O primeiro com 3 algarismos é ${r}.` }; }
-      return { q:'Um número é divisível por 6 quando…', ...mc('é divisível por 2 e por 3',['termina em 6','a soma dos algarismos é 6','é divisível por 2 ou por 3'],null),
-        ex:'6 = 2 × 3. Precisa passar nos dois testes: ser par E ter a soma dos algarismos múltipla de 3. Ex.: 114 (par, 1+1+4 = 6).' };
-    }
-  }
-};
-/* Assunto dominado (11 ou 12 acertos nas últimas 12) entra no nível prova. Troco/divisão da Maya: só no último degrau. */
-function usaNivelProva(k,sk,m){
-  if(!GENP[k][sk]) return false;
-  if(k==='maia' && DEGRAUS[sk] && degrauDe(sk)!==DEGRAUS[sk][DEGRAUS[sk].length-1]) return false;
-  const s=(m||maestria(k))[sk]; return !!s && s.n>=8 && s.c>=11;
-}
-/* Português no modo prova: primeiro as questões novas de nível prova e as que mais errou; depois as que nunca viu. */
-function escolherPTProva(k,banco,uv){
-  if(!banco.length) return null;
-  const err={}; itemsDe(k).forEach(i=>{ if(!i.ok) err[i.qid]=(err[i.qid]||0)+1; });
-  const nota=o=>(PROVA_PT.has(o.qid)?3:0)+Math.min(err[o.qid]||0,3)+(uv(o.qid)<0?1:0)+Math.random();
-  return [...banco].sort((a,b)=>nota(b)-nota(a))[0];
-}
-
-/* Novas questões de Português (v17) — nível prova. Focos: conjunção × preposição, porquês, mau/mal, mas/mais (Jaquinho). */
-const TRUQUE_CP='Truque: preposição liga PALAVRAS (de, para, com, sem, em, por, sobre, entre). Conjunção liga IDEIAS/orações (e, mas, porém, contudo, pois, porque, embora).';
-addPTX('jaquinho','classes',[
-  ['Em "Fiquei em casa, pois estava chovendo", a palavra "pois" é…',['conjunção','preposição','advérbio','interjeição'],'"Pois" liga duas ideias e explica a causa: conjunção. '+TRUQUE_CP],
-  ['Em "O presente é para a Maya", a palavra "para" é…',['preposição','conjunção','advérbio','pronome'],'"Para" liga as palavras "presente" e "Maya"; depois dela não vem uma ideia com verbo. É preposição. '+TRUQUE_CP],
-  ['Em "Treinei bastante, contudo perdi a corrida", a palavra "contudo" é…',['conjunção','preposição','advérbio','adjetivo'],'"Contudo" = "mas": liga duas ideias opostas. É conjunção. '+TRUQUE_CP],
-  ['Em "O violino de madeira", a palavra "de" é…',['preposição','conjunção','artigo','advérbio'],'"De" liga "violino" e "madeira": preposição. '+TRUQUE_CP],
-  ['Qual destas palavras é uma conjunção?',['embora','sobre','entre','contra'],'"Embora" liga ideias ("Fui, embora estivesse cansado"). Sobre, entre e contra são preposições. '+TRUQUE_CP],
-  ['Qual destas palavras é uma preposição?',['sem','mas','porém','pois'],'"Sem" liga palavras ("café sem açúcar"). Mas, porém e pois são conjunções. '+TRUQUE_CP],
-  ['Em "Saí sem guarda-chuva e me molhei", qual palavra é preposição?',['sem','e','me','molhei'],'"Sem" liga "saí" e "guarda-chuva". "E" é conjunção, "me" é pronome e "molhei" é verbo. '+TRUQUE_CP],
-  ['Em "Comprei pão e leite", a palavra "e" é…',['conjunção','preposição','artigo','advérbio'],'"E" junta (adiciona) ideias ou palavras: conjunção. '+TRUQUE_CP],
-  ['Em "Ele correu, mas não alcançou o ônibus", que ideia a conjunção "mas" traz?',['oposição','causa','conclusão','adição'],'Ele correu, só que NÃO alcançou: uma ideia contraria a outra. É oposição.'],
-  ['Em "Estudou muito; por isso, passou na prova", "por isso" indica…',['conclusão','oposição','tempo','comparação'],'Passar na prova é o resultado de ter estudado: conclusão (consequência).']
-]);
-addPTX('jaquinho','ortografia',[
-  ['Complete: "Quero saber ___ o James acorda de madrugada."',['por que','porque','por quê','porquê'],'Dá para trocar por "por qual motivo": "Quero saber por qual motivo o James acorda". Então é "por que", separado e sem acento.'],
-  ['Complete: "Você chegou atrasado ___?"',['por quê','por que','porque','porquê'],'Pergunta que termina logo depois do "por quê": separado e COM acento.'],
-  ['Complete: "Não fui ao treino ___ estava gripado."',['porque','por que','por quê','porquê'],'É a explicação (a resposta): "porque", junto e sem acento.'],
-  ['Complete: "Ninguém entendeu o ___ da briga."',['porquê','por que','porque','por quê'],'Com artigo antes ("o porquê") vira substantivo, quer dizer "o motivo": junto e com acento.'],
-  ['Complete: "Explique ___ você escolheu o violino."',['por que','porque','porquê','por quê'],'Troque por "por qual motivo": "Explique por qual motivo você escolheu". Cabe? Então é "por que".'],
-  ['Complete: "O Daniel se comportou ___ na festa."',['mal','mau','mais','mas'],'O contrário seria "comportou BEM". Contrário de bem = mal (com L).'],
-  ['Complete: "Aquele foi um ___ exemplo."',['mau','mal','mas','mais'],'O contrário seria "um BOM exemplo". Contrário de bom = mau (com U).'],
-  ['Complete: "O time jogou ___ hoje e perdeu de 5 a 0."',['mal','mau','mais','mas'],'O contrário seria "jogou BEM": mal (com L).'],
-  ['Complete: "Treinei muito, ___ ainda erro essa música."',['mas','mais','mal','mau'],'Dá para trocar por "porém": é "mas" (oposição). "Mais" é quantidade.'],
-  ['Complete: "Quero ___ uma fatia de pizza."',['mais','mas','mau','mal'],'Ideia de quantidade (o contrário seria "menos"): "mais".'],
-  ['Complete: "Moro nesta casa ___ três anos."',['há','a','à','ah'],'Tempo que já passou: "há" (dá para trocar por "faz": "faz três anos").'],
-  ['Qual palavra está escrita do jeito certo?',['discussão','discução','discusão','dicussão'],'Discussão: com SS. Pense em "discutir" → "discussão".'],
-  ['Qual palavra está escrita do jeito certo?',['excursão','escursão','excurção','escurção'],'Excursão: com XC e S.'],
-  ['Qual palavra está escrita do jeito certo?',['nascimento','nacimento','nassimento','nasimento'],'Nascimento vem de "nascer": com SC.']
-]);
-addPTX('jaquinho','concordancia',[
-  ['Complete: "___ muitas pessoas na fila."',['Havia','Haviam','Houveram','Hão'],'"Haver" com sentido de "existir" fica sempre no singular: havia, houve, há.'],
-  ['Complete: "___ três semanas que não chove."',['Faz','Fazem','Fizeram','Faziam'],'"Fazer" indicando tempo que passou fica no singular: faz três semanas.'],
-  ['Complete: "Seguem ___ as fotos da viagem."',['anexas','anexo','anexa','anexos'],'"Anexo" concorda com o que está anexado: as fotos (feminino, plural) → anexas.'],
-  ['Complete: "É meio-dia e ___."',['meia','meio','meias','meios'],'É meio-dia e meia HORA: meia (feminino).']
-]);
-addPTX('maia','classes',[
-  ['Qual é o coletivo de "abelhas"?',['enxame','cardume','rebanho','matilha'],'Grupo de abelhas = enxame. Cardume é de peixes, rebanho de ovelhas, matilha de cães.'],
-  ['Qual é o coletivo de "músicos"?',['orquestra','alcateia','frota','constelação'],'Grupo de músicos = orquestra (ou banda). Alcateia é de lobos, frota de navios, constelação de estrelas.'],
-  ['Na frase "Ela tocou órgão na igreja", a palavra "Ela" é…',['pronome','substantivo','verbo','adjetivo'],'"Ela" está no lugar do nome da pessoa: é pronome.'],
-  ['Em "O gato preguiçoso dormiu no sofá", quantos adjetivos há?',['1','2','3','0'],'Só "preguiçoso" diz como é o gato. Gato e sofá são substantivos; dormiu é verbo.'],
-  ['Qual destas palavras é um verbo?',['brincaram','brincadeira','brincalhão','brinquedo'],'Verbo é ação: "brincaram" (alguém fez). As outras são nomes ou características.']
-]);
-addPTX('maia','ortografia',[
-  ['Complete: "a ca__oça do cavalo"',['rr','r','rh','h'],'Entre duas vogais, para o som forte do R, usamos RR: carroça.'],
-  ['Qual palavra está escrita do jeito certo?',['cansado','cançado','canssado','kansado'],'Cansado: com S. Pense em "cansar".'],
-  ['Qual palavra está escrita do jeito certo?',['gelatina','jelatina','guelatina','gelatinha'],'Gelatina: com G, igual a "gelo".']
-]);
-addPTX('maia','pontuacao',[
-  ['Qual frase está pontuada corretamente?',['Maya, venha jantar!','Maya venha, jantar!','Maya venha jantar,!',', Maya venha jantar!'],'Quando chamamos alguém pelo nome, usamos vírgula depois do nome: "Maya, venha jantar!".'],
-  ['Em "Comprei lápis borracha e caderno", onde falta uma vírgula?',['depois de "lápis"','depois de "Comprei"','depois de "borracha"','depois de "caderno"'],'Numa lista, a vírgula separa os itens; antes do "e" não precisa: "lápis, borracha e caderno".']
-]);
-addPTX('maia','plural',[
-  ['Qual é o plural de "cidadão"?',['cidadãos','cidadões','cidadães','cidadãns'],'Cidadão → cidadãos (como mão → mãos).'],
-  ['Qual é o plural de "papel"?',['papéis','papels','papeles','papeis'],'Palavras terminadas em "el" trocam por "éis": papel → papéis, anel → anéis.']
-]);
-addPTX('maia','sinonimos',[
-  ['Qual é o antônimo (contrário) de "generoso"?',['egoísta','bondoso','gentil','feliz'],'Generoso divide com os outros; o contrário é egoísta.'],
-  ['Na frase "A Maya ficou exausta depois do recital", "exausta" quer dizer…',['muito cansada','muito feliz','com fome','com medo'],'Exausta = muito, muito cansada.']
-]);
-
 /* ================= login simples ================= */
 /* SHA-256 (só para não deixar as senhas escritas no código; não é segurança de banco). */
 function sha256(txt){
@@ -1173,20 +901,18 @@ let user=null; try{ const u=localStorage.getItem(LSU); if(u&&USUARIOS[u]) user=u
 const ehPai=()=>user==='papai';
 
 /* ================= degraus (Maya): troco e divisão ================= */
-/* Troco: 1 = reais inteiros · 2 = ,00/,50 · 2.5 = centavos redondos (,10 a ,90; v17) · 3 = centavos quebrados.
-   Na tela os degraus aparecem numerados pela posição: troco 1 a 4, divisão 1 a 4.
+/* Troco: 1 = reais inteiros · 2 = ,00/,50 · 3 = centavos quebrados.
    Divisão: 1 = ÷2 a ÷5 · 2 = ÷6 a ÷9 · 3 = com resto · 4 = resultado com 2 algarismos.
    Sobe depois de 4 acertos seguidos no degrau; desce depois de 3 erros seguidos. */
-const DEGRAUS={dinheiro:[1,2,2.5,3], divisao:[1,2,3,4]};
-const posDegrau=(sk,nv)=>DEGRAUS[sk].indexOf(nv)+1;
+const DEGRAUS={dinheiro:3, divisao:4};
 function degrauDe(sk){
-  const ord=DEGRAUS[sk]; let p=0, ok=0, er=0;
+  const max=DEGRAUS[sk]; let nv=1, ok=0, er=0;
   for(const i of itemsDe('maia').filter(i=>i.skill===sk && i.nv)){
-    if(i.nv!==ord[p]) continue;
-    if(i.ok){ ok++; er=0; if(ok>=4 && p<ord.length-1){ p++; ok=0; } }
-    else { er++; ok=0; if(er>=3 && p>0){ p--; er=0; } }
+    if(i.nv!==nv) continue;
+    if(i.ok){ ok++; er=0; if(ok>=4 && nv<max){ nv++; ok=0; } }
+    else { er++; ok=0; if(er>=3 && nv>1){ nv--; er=0; } }
   }
-  return ord[p];
+  return nv;
 }
 const degrauTroco=()=>degrauDe('dinheiro');
 
@@ -1196,7 +922,7 @@ const limPressa=q=>q.texto?7:4;   // segundos mínimos antes de responder sem co
 /* ================= salvar também o que foi respondido no meio ================= */
 function respondidas(r){ return r ? r.qs.map((q,i)=>({q,i})).filter(o=>r.resp[o.i]!=null) : []; }
 function sessaoDoRun(parcial){
-  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; if(q.gemea) o.g=1; if(q.etapa) o.e=q.etapa; if(q.revisao) o.rv=1; if(q.dificil) o.d=1; if(run.prova) o.p=1; if(run.resp[i]===-1) o.b=1; return o; });
+  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; if(q.gemea) o.g=1; if(q.etapa) o.e=q.etapa; if(q.revisao) o.rv=1; return o; });
   const s={id:run.id, kid:run.kid, tipo:run.tipo, date:today(), ts, serie:serieDe(run.kid), dur:Math.round((ts-run.t0)/1000), items:its, score:its.filter(i=>i.ok).length};
   if(parcial) s.parcial=true;
   return s;
@@ -1324,7 +1050,7 @@ function marcarSom(){ const b=$('#som'); if(b){ b.textContent=somOn?'Som ligado'
 /* ---- Onde os treinos ficam salvos: Google Planilha via Apps Script (mesmo modelo do sistema da floricultura) ---- */
 const API_URL = 'https://script.google.com/macros/s/AKfycbx0X0ynsWZYjWvS_ehZt5LKk3_L3F4VGUgijW3nv7tsmGpG0XLRUCziiksPBbvfsinZ7Q/exec';   // termina em /exec — ver passo a passo no CLAUDE.md
 const TOKEN = 'mb-db211c7bc8334f33975a4b5e';
-let sessions=[], cfg={maiaSerie:4}, kid='jaquinho', view='treino', run=null, storeMode='local';
+let sessions=[], cfg={maiaSerie:4}, kid='jaquinho', view='treino', run=null, storeMode='local', estudarFoco=null;
 const LS='missao-bolsa-v1', LSQ='missao-bolsa-fila';
 function loadLocal(){ try{ const j=JSON.parse(localStorage.getItem(LS)||'{}'); sessions=j.sessions||[]; cfg=Object.assign(cfg,j.cfg||{}); }catch(e){} }
 function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify({sessions,cfg})); }catch(e){} }
@@ -1384,8 +1110,7 @@ window.addEventListener('pagehide', ()=>salvarParcial());
 
 /* ================= métricas ================= */
 const serieDe = k => k==='maia' ? (cfg.maiaSerie||4) : 7;
-/* Questões em branco do modo prova (o tempo acabou antes) não entram no domínio dos assuntos: a criança nem chegou a ler. */
-function itemsDe(k){ return sessions.filter(s=>s.kid===k).sort((a,b)=>a.ts-b.ts).flatMap(s=>s.items.filter(i=>!i.b).map(i=>({...i,date:s.date}))); }
+function itemsDe(k){ return sessions.filter(s=>s.kid===k).sort((a,b)=>a.ts-b.ts).flatMap(s=>s.items.map(i=>({...i,date:s.date}))); }
 function maestria(k){
   /* Questão de Português repetida (já respondida antes) vale meio ponto: decorar a resposta não infla o domínio. */
   const visto=new Set(), it=itemsDe(k).filter(i=>!i.e).map(i=>{ let w=1; if(!SKILLS[k][i.skill]?.mat){ if(visto.has(i.qid)) w=.5; visto.add(i.qid); } return {...i,w}; }), out={};
@@ -1413,7 +1138,7 @@ function revisaoSimulado(k){
   const s=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts)[0];
   if(!s || diasEntre(s.date,today())>=REV_DIAS) return null;
   const chave=i=>SKILLS[k][i.skill]?.mat?'sk:'+i.skill:i.qid;
-  const erros={}; for(const i of s.items) if(!i.ok && !i.b && SKILLS[k][i.skill]) erros[chave(i)]={skill:i.skill,qid:i.qid,mat:!!SKILLS[k][i.skill].mat};
+  const erros={}; for(const i of s.items) if(!i.ok && SKILLS[k][i.skill]) erros[chave(i)]={skill:i.skill,qid:i.qid,mat:!!SKILLS[k][i.skill].mat};
   const feitos={};
   for(const x of sessions.filter(x=>x.kid===k&&x.ts>s.ts)) for(const i of x.items) if(i.rv && erros[chave(i)]){ const f=feitos[chave(i)]||(feitos[chave(i)]={ok:false,hoje:false}); if(i.ok) f.ok=true; if(x.date===today()) f.hoje=true; }
   const lista=Object.entries(erros).map(([c,e])=>({...e,chave:c,resolvido:!!feitos[c]?.ok,hojeVisto:!!feitos[c]?.hoje}));
@@ -1442,7 +1167,7 @@ function cardRevisao(k){ const t=textoRevisao(k); return t?`<section class="card
 /* Reforço com repetição espaçada: o que errou volta depois de 1 dia; acertou, volta depois de 3; acertou de novo, está fixado. */
 function devidos(k){
   const st={};
-  for(const s of sessions.filter(x=>x.kid===k).sort((a,b)=>a.ts-b.ts)) for(const it of s.items){ if(it.b) continue;
+  for(const s of sessions.filter(x=>x.kid===k).sort((a,b)=>a.ts-b.ts)) for(const it of s.items){
     const mat=!!SKILLS[k][it.skill]?.mat; const key=mat?'sk:'+it.skill:it.qid;
     if(!it.ok) st[key]={nivel:0,last:s.date,skill:it.skill,qid:it.qid,mat};
     else if(st[key] && s.date>st[key].last){ st[key].nivel++; st[key].last=s.date; if(st[key].nivel>=2) delete st[key]; }
@@ -1451,14 +1176,11 @@ function devidos(k){
   return Object.values(st).filter(x=>diasEntre(x.last,hoje)>=(x.nivel===0?1:3)).sort((a,b)=>a.last<b.last?-1:1);
 }
 function questaoPT(k,o,extra){ const sh=shuffle(o.ops); return {skill:o.skill,qid:o.qid,q:o.q,texto:o.tx?TX[o.tx]:null,options:sh,a:sh.indexOf(o.ops[0]),ex:o.ex,...extra}; }
-function questaoMat(k,sk,extra){
-  if(extra.dificil && GENP[k][sk]){ const g=GENP[k][sk](serieDe(k)); return {skill:sk,qid:sk+'-gen',q:g.q,options:g.options,a:g.a,ex:g.ex,...extra}; }
-  const nv=(k==='maia'&&DEGRAUS[sk])?degrauDe(sk):undefined; const g=GEN[k][sk](serieDe(k),nv); return {skill:sk,qid:sk+'-gen',q:g.q,options:g.options,a:g.a,ex:g.ex,...(nv?{nv}:{}),...extra}; }
+function questaoMat(k,sk,extra){ const nv=(k==='maia'&&DEGRAUS[sk])?degrauDe(sk):undefined; const g=GEN[k][sk](serieDe(k),nv); return {skill:sk,qid:sk+'-gen',q:g.q,options:g.options,a:g.a,ex:g.ex,...(nv?{nv}:{}),...extra}; }
 /* Quando a criança viu cada questão de Português pela última vez (-1 = nunca viu). */
 function ultimaVez(k){ const m={}; itemsDe(k).forEach((i,n)=>m[i.qid]=n); return q=>q in m?m[q]:-1; }
 function escolherPT(k,banco,uv){ if(!banco.length) return null; const nunca=banco.filter(o=>uv(o.qid)<0); if(nunca.length) return pick(nunca); return pick([...banco].sort((a,b)=>uv(a.qid)-uv(b.qid)).slice(0,3)); }
 function montarTreino(k,tipo='treino'){
-  const prova = tipo==='prova'; if(prova) tipo='simulado';
   const nMat = tipo==='simulado' ? (k==='jaquinho'?15:10) : 5, nPt=nMat;
   const m=maestria(k), skills=Object.keys(SKILLS[k]);
   const B=bancoPT(k), uv=ultimaVez(k);
@@ -1484,46 +1206,44 @@ function montarTreino(k,tipo='treino'){
   const escolhidas=[];
   for(const t of [...Array(fMat).fill('mat'),...Array(fPt).fill('pt')]){ let pool=(t==='mat'?mats:pts).filter(s=>(cont[s]||0)<lim); if(!pool.length) pool=t==='mat'?mats:pts; const sk=sortear(pool); cont[sk]=(cont[sk]||0)+1; escolhidas.push(sk); }
   /* Maya com Português acima de 90%: pelo menos 2 das 5 de Português são de interpretação (textos maiores, como na prova). */
-  /* Modo prova: pelo menos 30% do Português é interpretação de texto. */
-  if(prova){ const nPtTot=escolhidas.filter(s=>!SKILLS[k][s].mat).length; let ni=escolhidas.filter(s=>s==='interpretacao').length; for(let i=0;i<escolhidas.length && ni<Math.ceil(nPtTot*.3);i++){ if(!SKILLS[k][escolhidas[i]].mat && escolhidas[i]!=='interpretacao'){ escolhidas[i]='interpretacao'; ni++; } } }
   if(k==='maia' && tipo==='treino' && (acerto(k,false)??0)>=90){ let ni=escolhidas.filter(s=>s==='interpretacao').length; for(let i=0;i<escolhidas.length && ni<2;i++){ if(!SKILLS[k][escolhidas[i]].mat && escolhidas[i]!=='interpretacao'){ escolhidas[i]='interpretacao'; ni++; } } }
   for(const sk of escolhidas){
     if(k==='jaquinho' && sk==='fracoes_soma' && tipo==='treino' && emEtapas()) qs.push({skill:sk,grupo:etapasFracoes()});
-    else if(SKILLS[k][sk].mat) qs.push(questaoMat(k,sk,{dificil: prova || (tipo==='treino' && usaNivelProva(k,sk,m) && Math.random()<.5)}));
+    else if(SKILLS[k][sk].mat) qs.push(questaoMat(k,sk,{}));
     else{
-      const esc2 = prova ? escolherPTProva : escolherPT;
-      const o=esc2(k,B.lista.filter(o=>o.skill===sk && !usados.has(o.qid)),uv) || esc2(k,B.lista.filter(o=>!usados.has(o.qid)),uv);
-      if(o){ usados.add(o.qid); qs.push(questaoPT(k,o,{dificil: PROVA_PT.has(o.qid)})); }
+      const o=escolherPT(k,B.lista.filter(o=>o.skill===sk && !usados.has(o.qid)),uv) || escolherPT(k,B.lista.filter(o=>!usados.has(o.qid)),uv);
+      if(o){ usados.add(o.qid); qs.push(questaoPT(k,o,{})); }
     }
   }
   return tipo==='simulado' ? qs.sort((a,b)=>(SKILLS[k][b.skill].mat?1:0)-(SKILLS[k][a.skill].mat?1:0)) : shuffle(qs).flatMap(q=>q.grupo||[q]);
 }
-function montarPratica(k,sk){
-  const qs=montarPraticaBase(k,sk), R=revisaoSimulado(k), B=bancoPT(k);
+/* Prática: a criança escolhe 5, 10, 15 ou 20 questões (Português limitado ao que existe no banco daquele assunto). */
+const QTD_PRATICA=[5,10,15,20];
+const maxPratica=(k,sk)=>SKILLS[k][sk].mat ? 20 : bancoPT(k).lista.filter(o=>o.skill===sk).length;
+const opcoesPratica=(k,sk)=>{ const m=maxPratica(k,sk), l=QTD_PRATICA.filter(x=>x<=m); if(m<20 && !l.includes(m)) l.push(m); return l.length?l:[m]; };
+function qtdPratica(k,sk){ let n=5; try{ n=+localStorage.getItem('missao-bolsa-qtd-'+k)||5; }catch(e){} const op=opcoesPratica(k,sk); return op.includes(n)?n:op.filter(x=>x<=n).pop()||op[0]; }
+function montarPratica(k,sk,n=5){
+  const qs=montarPraticaBase(k,sk,n), R=revisaoSimulado(k), B=bancoPT(k);
   const rev=(R?R.pend.filter(e=>e.skill===sk):[]).slice(0,2).map(e=>questaoRevisao(k,e,B)).filter(Boolean);
   if(!rev.length) return qs;
   const resto=qs.filter(q=>!rev.some(r=>r.qid===q.qid && !r.qid.endsWith('-gen')));
   const etapas=resto.filter(q=>q.etapa), outras=resto.filter(q=>!q.etapa);
   return [...rev, ...etapas, ...outras.slice(0, Math.max(0, qs.length-rev.length-etapas.length))];
 }
-function montarPraticaBase(k,sk){
-  if(k==='jaquinho' && sk==='fracoes_soma' && emEtapas()) return [...etapasFracoes(),...Array.from({length:4},()=>questaoMat(k,sk,{}))];
-  if(SKILLS[k][sk].mat){ const np=usaNivelProva(k,sk); return Array.from({length:5},(_,i)=>questaoMat(k,sk,{dificil: np && i%2===1})); }
+function montarPraticaBase(k,sk,n=5){
+  if(k==='jaquinho' && sk==='fracoes_soma' && emEtapas()) return [...etapasFracoes(),...Array.from({length:Math.max(2,n-3)},()=>questaoMat(k,sk,{}))];
+  if(SKILLS[k][sk].mat) return Array.from({length:n},()=>questaoMat(k,sk,{}));
   const uv=ultimaVez(k);
-  return shuffle(bancoPT(k).lista.filter(o=>o.skill===sk)).sort((a,b)=>uv(a.qid)-uv(b.qid)).slice(0,5).map(o=>questaoPT(k,o,{}));
+  return shuffle(bancoPT(k).lista.filter(o=>o.skill===sk)).sort((a,b)=>uv(a.qid)-uv(b.qid)).slice(0,n).map(o=>questaoPT(k,o,{}));
 }
 function iniciarRun(qs,tipo){ const t0=Date.now(); run={id:kid+'-'+t0,kid,qs,i:0,resp:[],tq:[],rap:[],t0,qT0:t0,tipo}; }
-function novaRun(tipo){
-  if(tipo==='prova'){ iniciarRun(montarTreino(kid,'prova'),'simulado'); run.prova=true; run.limite=PROVA_MIN[kid]*60; render(); return; }
-  iniciarRun(montarTreino(kid,tipo),tipo); render();
-}
-const restante=()=>Math.max(0, run.limite-Math.round((Date.now()-run.t0)/1000));
+function novaRun(tipo){ iniciarRun(montarTreino(kid,tipo),tipo); render(); }
 const mmss=sec=>Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
 
 /* ================= desenho ================= */
 function estrela(on,size=28){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" fill="${on?'var(--gold)':'var(--line)'}"/></svg>`; }
 function setKid(k){ if(!ehPai()) return; salvarParcial(); kid=k; try{localStorage.setItem(LS+'-kid',k);}catch(e){} run=null; render(); }
-function setView(v){ if(v==='painel' && !ehPai()) return; if(v!=='treino'){ salvarParcial(); run=null; } view=v; render(); }
+function setView(v){ if(v==='painel' && !ehPai()) return; estudarFoco=null; if(v!=='treino'){ salvarParcial(); run=null; } view=v; render(); }
 function sair(){ salvarParcial(); run=null; user=null; view='treino'; try{ localStorage.removeItem(LSU); }catch(e){} render(); }
 function entrar(u){ user=u; try{ localStorage.setItem(LSU,u); }catch(e){} if(u!=='papai'){ kid=u; if(view==='painel') view='treino'; } else view='painel'; run=null; render(); window.scrollTo({top:0}); }
 
@@ -1539,7 +1259,7 @@ function render(){
   const v=$('#view');
   if(view==='treino') v.innerHTML = run ? (run.fim ? telaFim() : telaQuestao()) : telaInicio();
   else if(view==='evolucao') v.innerHTML = telaEvolucao(kid, false);
-  else if(view==='estudar') v.innerHTML = telaEstudar();
+  else if(view==='estudar') v.innerHTML = telaEstudar(estudarFoco);
   else v.innerHTML = telaPainel();
   ligar();
 }
@@ -1581,12 +1301,6 @@ function telaInicio(){
       <button class="btn ghost" id="simulado">Fazer simulado</button>
     </div>
   </section>
-  <section class="card">
-    <div class="row" style="justify-content:space-between">
-      <div style="display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 280px"><h3>Modo prova (difícil)</h3><p class="muted">${nSim} questões no nível da prova de bolsa, com tempo: ${PROVA_MIN[kid]} minutos. A correção só aparece no final. Se o tempo acabar, as que ficaram em branco contam como erro, igual na prova de verdade.</p></div>
-      <button class="btn ghost" id="prova">Fazer modo prova</button>
-    </div>
-  </section>
   ${cardRevisao(kid)}
   ${cardMedalhas(kid)}
   ${cardMeta()}
@@ -1607,9 +1321,9 @@ function telaQuestao(){
     return `<button class="opt ${cls}" id="opt-${j}" data-j="${j}" ${resp!=null?'disabled':''}><span class="l">${letras[j]}</span><span>${esc(o)}</span></button>`; }).join('');
   const pressa = resp==null && run.avisado ? `<div class="pressa" role="status" id="pressa">Opa, foi rápido demais! ${kid==='maia'?'Leu tudo com calma, linda?':'Leu o enunciado inteiro?'} Se tiver certeza, toque em Confirmar de novo. Se não, troque a alternativa.</div>` : '';
   let fb=''; if(resp!=null && !sim){ const ok=resp===q.a; fb=`<div class="feedback ${ok?'ok':'no'}" role="status"><b>${esc(ok?pick(K.vivas):pick(K.forca))}</b><span>${esc(q.ex)}</span>${q.temGemea?'<span><strong>Agora vem uma gêmea:</strong> uma questão parecida, para fixar o jeito certo.</span>':''}</div>`; }
-  const titulo = sim ? (run.prova?'Modo prova':'Simulado') : run.tipo==='refazer' ? 'Refazendo' : run.tipo==='pratica' ? 'Praticando' : '';
+  const titulo = sim ? 'Simulado' : run.tipo==='refazer' ? 'Refazendo' : run.tipo==='pratica' ? 'Praticando' : '';
   return `<section class="card">
-    <div class="qhead"><span class="row" style="gap:6px">${q.revisao?'<span class="tag ref">Revisão do simulado</span>':''}${q.reforco?'<span class="tag ref">Reforço</span>':''}${q.gemea?'<span class="tag ref">Gêmea</span>':''}${q.etapa?`<span class="tag ref">Etapa ${q.etapa} de 3</span>`:''}${titulo?`<span class="tag ref">${titulo}</span>`:''}${q.dificil&&!run.prova?'<span class="tag ref">Nível prova</span>':''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${posDegrau(q.skill,q.nv)} de ${DEGRAUS[q.skill].length}`:''}</span></span><span>${sim?`<span id="timer">${run.prova?'faltam '+mmss(restante()):mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
+    <div class="qhead"><span class="row" style="gap:6px">${q.revisao?'<span class="tag ref">Revisão do simulado</span>':''}${q.reforco?'<span class="tag ref">Reforço</span>':''}${q.gemea?'<span class="tag ref">Gêmea</span>':''}${q.etapa?`<span class="tag ref">Etapa ${q.etapa} de 3</span>`:''}${titulo?`<span class="tag ref">${titulo}</span>`:''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${q.nv} de ${DEGRAUS[q.skill]||3}`:''}</span></span><span>${sim?`<span id="timer">${mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
     <div class="progress" aria-hidden="true"><i style="width:${(run.i+(resp!=null?1:0))/run.qs.length*100}%"></i></div>
     ${q.texto?`<div class="texto">${esc(q.texto)}</div>`:''}
     <p class="qtext">${esc(q.q)}</p>
@@ -1627,10 +1341,10 @@ function telaFim(){
   if(run.tipo==='refazer') return `<section class="card" style="align-items:center;text-align:center"><p class="muted">Refazendo as que errou</p><div class="big">${c}<span class="muted" style="font-size:28px"> / ${t}</span></div><h2>${c===t?'Agora foi! Essas questões voltam daqui a alguns dias para fixar de vez.':'Quase! Essas voltam como reforço nos próximos treinos.'}</h2><div class="row" style="justify-content:center"><button class="btn" id="estudar-erros">Estudar o que errei</button><button class="btn ghost" id="voltar">Voltar ao início</button></div></section>`;
   const msg = c===t?'Gabaritou! Isso é nível bolsa!': pct>=70?'Mandou muito bem! Faltou pouquinho.': pct>=50?'Bom treino! Amanhã tem mais.':'Treino é para isso: agora a gente sabe o que estudar.';
   const sim=run.tipo==='simulado';
-  const gab = sim && erradas.length ? `<div style="display:flex;flex-direction:column;gap:10px;text-align:left;width:100%"><h3>Correção das que você errou</h3>${erradas.map(o=>`<div class="feedback no"><span class="muted" style="font-size:13px">Questão ${o.i+1} · ${SKILLS[kid][o.q.skill].nome}</span><b style="font-size:16px">${esc(o.q.q)}</b><span>${run.resp[o.i]===-1?'Ficou em branco (o tempo acabou)':'Você marcou: '+esc(o.q.options[run.resp[o.i]])} · Certa: <strong>${esc(o.q.options[o.q.a])}</strong></span><span>${esc(o.q.ex)}</span></div>`).join('')}</div>` : '';
+  const gab = sim && erradas.length ? `<div style="display:flex;flex-direction:column;gap:10px;text-align:left;width:100%"><h3>Correção das que você errou</h3>${erradas.map(o=>`<div class="feedback no"><span class="muted" style="font-size:13px">Questão ${o.i+1} · ${SKILLS[kid][o.q.skill].nome}</span><b style="font-size:16px">${esc(o.q.q)}</b><span>Você marcou: ${esc(o.q.options[run.resp[o.i]])} · Certa: <strong>${esc(o.q.options[o.q.a])}</strong></span><span>${esc(o.q.ex)}</span></div>`).join('')}</div>` : '';
   return `<section class="card" style="align-items:center;text-align:center">
     ${(run.festa||[]).map(f=>`<div class="festa">${esc(f)}</div>`).join('')}
-    <p class="muted">${sim?`${run.prova?'Modo prova':'Simulado da prova'} · ${mmss(run.dur||0)}${run.prova&&run.brancos?` · ${run.brancos} em branco (o tempo acabou)`:''}`: run.tipo==='pratica'?`Prática de ${SKILLS[kid][run.qs[0].skill].nome}`:'Resultado de hoje'}</p>
+    <p class="muted">${sim?`Simulado da prova · ${mmss(run.dur||0)}`: run.tipo==='pratica'?`Prática de ${SKILLS[kid][run.qs[0].skill].nome}`:'Resultado de hoje'}</p>
     <div class="big">${c}<span class="muted" style="font-size:28px"> / ${t}</span></div>
     <div class="stars">${[0,1,2].map(i=>estrela(i<st,36)).join('')}</div>
     <h2>${msg}</h2>
@@ -1687,7 +1401,7 @@ function areaEstudo(b){ document.querySelectorAll('[data-area]').forEach(x=>x.se
 function telaEstudar(focoSk){
   const f=new Set(focoSk||foco(kid,3)), pr=precisaReforco(kid); (focoSk||[]).forEach(s=>pr.add(s));
   const ordem=[...Object.keys(LICOES[kid])].sort((a,b)=>((f.has(b)?2:0)+(pr.has(b)?1:0))-((f.has(a)?2:0)+(pr.has(a)?1:0)));
-  return `<section class="card"><h2>Para estudar</h2><p class="muted">Os assuntos com borda colorida são o foco agora. Leia o resumo, abra a "Explicação completa" para ver o passo a passo e os exemplos, resolva o desafio no caderno e depois pratique só aquele assunto. Assunto que você errou há pouco ganha um quadro extra com outro jeito de explicar.</p>
+  return `<section class="card"><h2>Para estudar</h2><p class="muted">Os assuntos com borda colorida são o foco agora. Leia o resumo, abra a "Explicação completa" para ver o passo a passo e os exemplos, resolva o desafio no caderno e depois pratique só aquele assunto (você escolhe quantas questões: 5, 10, 15 ou 20). Assunto que você errou há pouco ganha um quadro extra com outro jeito de explicar.</p>
     <input id="busca-estudo" type="search" placeholder="Buscar assunto (ex.: ${kid==='maia'?'troco, divisão, vírgula':'frações, MMC, acento'})" autocomplete="off" oninput="filtrarEstudo()" aria-label="Buscar assunto" style="width:100%;font:600 16px var(--font-body);padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)">
     <div class="seg" role="group" aria-label="Filtrar por matéria"><button data-area="todos" aria-pressed="true" onclick="areaEstudo(this)">Todos</button><button data-area="mat" aria-pressed="false" onclick="areaEstudo(this)">Matemática</button><button data-area="port" aria-pressed="false" onclick="areaEstudo(this)">Português</button></div>
     <p class="muted" id="busca-vazio" hidden>Nenhum assunto encontrado. Tente outra palavra.</p></section>
@@ -1702,7 +1416,10 @@ function telaEstudar(focoSk){
       <h4>Outro jeito de entender</h4><p>${esc(X.j)}</p>
       <h4>Mais exemplos resolvidos</h4>${X.e.map(([q,r])=>`<div class="ex"><strong>${esc(q)}</strong><br>${esc(r)}</div>`).join('')}</div>`:''}
       <p class="links">Para pesquisar com o papai ou a mamãe: ${refLinks(X.r).map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(n.split(' (')[0])}</a>`).join(' · ')}</p>`; })()}
-    <button class="btn ghost pratica" data-sk="${sk}">Praticar este assunto (5 questões)</button></article>`; }).join('')}</div>`;
+    <div class="row" style="gap:8px;align-items:center"><label class="muted" style="font-size:15px">Quantas questões?
+      <select class="qtd" data-sk="${sk}" aria-label="Quantidade de questões" style="font:600 16px var(--font-body);padding:8px 10px;margin-left:6px;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)">${opcoesPratica(kid,sk).map(x=>`<option value="${x}" ${x===qtdPratica(kid,sk)?'selected':''}>${x}</option>`).join('')}</select></label>
+      <button class="btn ghost pratica" data-sk="${sk}">Praticar este assunto</button></div>
+    ${!SKILLS[kid][sk].mat && maxPratica(kid,sk)<20?`<p class="note">Este assunto tem ${maxPratica(kid,sk)} questões no banco.</p>`:''}</article>`; }).join('')}</div>`;
 }
 
 function tabelaDias(k){
@@ -1727,9 +1444,8 @@ function telaPainel(){
       <div class="row" style="justify-content:space-between"><h2 style="color:var(--${k==='maia'?'maia':'jaq'})">${K.nome}</h2>
       ${k==='maia'?`<div class="seg" role="group" aria-label="Série da Maya em 2027"><button id="serie4" data-serie="4" aria-pressed="${cfg.maiaSerie===4}">4º ano</button><button id="serie5" data-serie="5" aria-pressed="${cfg.maiaSerie===5}">5º ano</button></div>`:'<span class="pill">7º ano em 2027</span>'}</div>
       <div class="row"><span class="pill">${nS} ${nS===1?'treino':'treinos'}</span><span class="pill">${sequencia(k)} ${sequencia(k)===1?'dia seguido':'dias seguidos'}</span><span class="pill">Mat ${acerto(k,true)??'—'}%</span><span class="pill">Port ${acerto(k,false)??'—'}%</span>${ult?`<span class="pill">Último: ${ult.date.slice(8)}/${ult.date.slice(5,7)}</span>`:''}</div>
-      ${(()=>{ const rv=devidos(k).length, sims=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts).slice(0,5); return `<p>Reforço pendente: <strong>${rv}</strong> ${rv===1?'questão':'questões'} que ${K.nome} errou e que voltam nos próximos treinos.</p>${sims.length?`<p>Simulados: ${sims.map(x=>`${x.date.slice(8)}/${x.date.slice(5,7)}${ehProva(x)?' (modo prova)':''} → <strong>${x.score}/${x.items.length}</strong> (${Math.round(100*x.score/x.items.length)}%)`).join(' · ')}</p>`:'<p class="muted">Nenhum simulado completo ainda.</p>'}`; })()}
-      ${(()=>{ const l=Object.keys(SKILLS[k]).filter(sk=>usaNivelProva(k,sk,m)).map(sk=>SKILLS[k][sk].nome); return `<p>Assuntos já no nível prova nos treinos: ${l.length?'<strong>'+l.join(', ')+'</strong>':'nenhum ainda'}.</p>`; })()}
-      ${k==='maia'?`<p>Troco em degraus: Maya está no <strong>degrau ${posDegrau('dinheiro',degrauTroco())} de 4</strong> (1 = reais inteiros · 2 = ,00 e ,50 · 3 = centavos redondos, de ,10 a ,90 · 4 = centavos quebrados). Sobe com 4 acertos seguidos; desce com 3 erros seguidos. A correção ensina o troco em dois pulos: até o real inteiro e depois até a nota.</p><p>Divisão em degraus: Maya está no <strong>degrau ${degrauDe('divisao')} de 4</strong> (1 = ÷2 a ÷5 · 2 = ÷6 a ÷9 · 3 = com resto · 4 = resultado com 2 algarismos). Sobe com 4 acertos seguidos; desce com 3 erros seguidos.</p>`:''}
+      ${(()=>{ const rv=devidos(k).length, sims=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts).slice(0,5); return `<p>Reforço pendente: <strong>${rv}</strong> ${rv===1?'questão':'questões'} que ${K.nome} errou e que voltam nos próximos treinos.</p>${sims.length?`<p>Simulados: ${sims.map(x=>`${x.date.slice(8)}/${x.date.slice(5,7)} → <strong>${x.score}/${x.items.length}</strong> (${Math.round(100*x.score/x.items.length)}%)`).join(' · ')}</p>`:'<p class="muted">Nenhum simulado completo ainda.</p>'}`; })()}
+      ${k==='maia'?`<p>Troco em degraus: Maya está no <strong>degrau ${degrauTroco()} de 3</strong> (1 = reais inteiros · 2 = ,00 e ,50 · 3 = centavos quebrados). Sobe com 4 acertos seguidos.</p><p>Divisão em degraus: Maya está no <strong>degrau ${degrauDe('divisao')} de 4</strong> (1 = ÷2 a ÷5 · 2 = ÷6 a ÷9 · 3 = com resto · 4 = resultado com 2 algarismos). Sobe com 4 acertos seguidos; desce com 3 erros seguidos.</p>`:''}
       ${k==='jaquinho'?(()=>{ const it=itemsDe(k).filter(i=>i.e), nm=['asas (cruz)','corpo (baixo)','somar']; return `<p>Soma de frações ${emEtapas()?'<strong>em 3 etapas</strong> (até ficar verde)':'já dominada: voltou ao formato normal'}.${it.length?' Acerto por etapa: '+[1,2,3].map(e=>{ const l=it.filter(i=>i.e===e); return `${nm[e-1]} ${l.length?Math.round(100*l.filter(i=>i.ok).length/l.length)+'% ('+l.length+')':'—'}`; }).join(' · ')+'.':''}</p>`; })():''}
       ${textoRevisao(k)}
       <p>Conquistas: ${medalhas(k).lista.map(x=>`${x.nome} ${x.ok?'✓':'('+x.prog+')'}`).join(' · ')}.</p>
@@ -1739,7 +1455,7 @@ function telaPainel(){
       ${nS?grafico(k):''}
       <div class="skills">${barras(k)}</div>
     </section>`; };
-  return `<section class="card"><p>Revisão do simulado: por 7 dias depois de cada simulado, o que foi errado volta nos treinos (até 3 por treino) e nas práticas do assunto, sempre com uma explicação antes da questão; acertou depois da explicação, sai da revisão. Como funciona o reforço: o treino diário escolhe mais questões dos assuntos fracos, e toda questão errada volta depois de 1 dia; se acertar, volta de novo depois de 3 dias; acertando de novo, conta como fixada. O simulado semanal mede como estão no formato da prova. O <strong>modo prova</strong> é o simulado difícil: toda a Matemática no nível da prova de bolsa e, em Português, as questões novas mais difíceis e as que mais erraram (pelo menos 30% de interpretação de texto), com tempo-limite (Maya ${PROVA_MIN.maia} min, Jaquinho ${PROVA_MIN.jaquinho} min); se o tempo acabar, as em branco contam como erro na nota, mas não no domínio dos assuntos. <strong>Nível prova nos treinos:</strong> assunto de Matemática com 11 ou 12 acertos nas últimas 12 passa a ter metade das questões no nível prova (etiqueta "Nível prova"); se o acerto cair, volta ao normal sozinho. Troco e divisão da Maya só entram no nível prova depois do último degrau. Na prova de bolsa do Objetivo e do Etapa caem Português e Matemática, com o conteúdo da série que eles estão terminando.</p><p class="note">Ainda faltam confirmar com as escolas a data da prova e o edital. Quando chegarem, os treinos são ajustados.</p></section>${bloco('jaquinho')}${bloco('maia')}
+  return `<section class="card"><p>Revisão do simulado: por 7 dias depois de cada simulado, o que foi errado volta nos treinos (até 3 por treino) e nas práticas do assunto, sempre com uma explicação antes da questão; acertou depois da explicação, sai da revisão. Como funciona o reforço: o treino diário escolhe mais questões dos assuntos fracos, e toda questão errada volta depois de 1 dia; se acertar, volta de novo depois de 3 dias; acertando de novo, conta como fixada. O simulado semanal mede como estão no formato da prova. Na prova de bolsa do Objetivo e do Etapa caem Português e Matemática, com o conteúdo da série que eles estão terminando.</p><p class="note">Ainda faltam confirmar com as escolas a data da prova e o edital. Quando chegarem, os treinos são ajustados.</p></section>${bloco('jaquinho')}${bloco('maia')}
   <section class="card"><h3>Meta da família</h3><p class="muted">Soma as questões dos dois de segunda a domingo. Esta semana: ${metaFamilia().n} de ${metaFamilia().meta}.</p>
   <div class="row"><label class="muted">Meta (questões)<br><input id="metaq" type="number" min="20" step="10" value="${metaFamilia().meta}" style="width:120px;font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></label>
   <label class="muted" style="flex:1 1 220px">Prêmio<br><input id="metap" value="${esc(metaFamilia().premio)}" style="width:100%;font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></label>
@@ -1751,12 +1467,9 @@ function telaPainel(){
 /* ================= eventos ================= */
 let tick=null;
 function ligar(){
-  clearInterval(tick); if(run && run.tipo==='simulado' && !run.fim) tick=setInterval(()=>{
-    if(run.prova && restante()<=0){ clearInterval(tick); acabouTempo(); return; }
-    const el=$('#timer'); if(el) el.textContent=run.prova?'faltam '+mmss(restante()):mmss(Math.round((Date.now()-run.t0)/1000)); },1000);
-  $('#prova')?.addEventListener('click',()=>novaRun('prova'));
+  clearInterval(tick); if(run && run.tipo==='simulado' && !run.fim) tick=setInterval(()=>{ const el=$('#timer'); if(el) el.textContent=mmss(Math.round((Date.now()-run.t0)/1000)); },1000);
   $('#start')?.addEventListener('click',()=>novaRun('treino'));
-  document.querySelectorAll('.pratica').forEach(b=>b.addEventListener('click',()=>{ iniciarRun(montarPratica(kid,b.dataset.sk),'pratica'); view='treino'; render(); window.scrollTo({top:0}); }));
+  document.querySelectorAll('.pratica').forEach(b=>b.addEventListener('click',()=>{ const n=+(document.querySelector(`select.qtd[data-sk="${b.dataset.sk}"]`)?.value||5); try{ localStorage.setItem('missao-bolsa-qtd-'+kid,String(n)); }catch(e){} iniciarRun(montarPratica(kid,b.dataset.sk,n),'pratica'); view='treino'; render(); window.scrollTo({top:0}); }));
   $('#simulado')?.addEventListener('click',()=>novaRun('simulado'));
   /* Tocar numa alternativa só marca; a resposta vale ao tocar em "Confirmar resposta" (evita toque sem querer no tablet). */
   document.querySelectorAll('.opt').forEach(b=>b.addEventListener('click',()=>{
@@ -1771,7 +1484,7 @@ function ligar(){
     /* Errou no treino ou na prática: entra logo depois uma questão gêmea (mesmo assunto, outros números). Até 3 por treino. */
     if(j!==q.a && (run.tipo==='treino'||run.tipo==='pratica') && !q.gemea && !q.etapa && (run.gemeas||0)<3){
       let g=null;
-      if(SKILLS[kid][q.skill].mat) g=questaoMat(kid,q.skill,{gemea:true,dificil:!!q.dificil});
+      if(SKILLS[kid][q.skill].mat) g=questaoMat(kid,q.skill,{gemea:true});
       else { const usados=new Set(run.qs.map(x=>x.qid)); const o=escolherPT(kid,bancoPT(kid).lista.filter(o=>o.skill===q.skill && !usados.has(o.qid)),ultimaVez(kid)); if(o) g=questaoPT(kid,o,{gemea:true}); }
       if(g){ run.qs.splice(run.i+1,0,g); run.gemeas=(run.gemeas||0)+1; q.temGemea=true; }
     }
@@ -1781,19 +1494,7 @@ function ligar(){
   $('#antes-ok')?.addEventListener('click',()=>{ run.antesOk=run.antesOk||{}; run.antesOk[run.i]=1; run.qT0=Date.now(); render(); window.scrollTo({top:0}); });
   $('#next')?.addEventListener('click',async()=>{
     if(run.i+1<run.qs.length){ pararAudios(); run.i++; run.qT0=Date.now(); run.pend=null; run.avisado=false; render(); window.scrollTo({top:0}); return; }
-    await finalizarRun();
-  });
-  $('#again')?.addEventListener('click',()=>{ if(run && (run.tipo==='simulado'||run.tipo==='pratica')){ run=null; render(); } else novaRun('treino'); });
-  ligarResto();
-}
-/* Modo prova: acabou o tempo → as questões sem resposta ficam em branco (contam como erro) e o resultado aparece. */
-async function acabouTempo(){
-  if(!run || run.fim) return;
-  let n=0; run.qs.forEach((q,i)=>{ if(run.resp[i]==null){ run.resp[i]=-1; n++; } }); run.brancos=n; run.pend=null;
-  await finalizarRun();
-}
-async function finalizarRun(){
-    run.dur=Math.round((Date.now()-run.t0)/1000); if(run.prova) run.dur=Math.min(run.dur, run.limite);
+    run.dur=Math.round((Date.now()-run.t0)/1000);
     if(run.tipo==='refazer'){ run.fim=true; render(); return; }
     const antesMed=medalhasOk(kid), antesMeta=metaFamilia(), jaTinhaHoje=sessions.some(x=>x.kid===kid&&x.date===today()&&!x.parcial&&x.id!==run.id);
     const s=sessaoDoRun(false); upsertSession(s);
@@ -1804,12 +1505,12 @@ async function finalizarRun(){
     if(novas.length && M.lista.every(x=>x.ok)) run.festa.push(M.fim);
     if(antesMeta.n<antesMeta.meta && depoisMeta.n>=depoisMeta.meta) run.festa.push(`Meta da família batida! Prêmio liberado: ${depoisMeta.premio}.`);
     if(!jaTinhaHoje && seq>=2) run.festa.push(`${seq} dias seguidos de treino!`);
-    run.fim=true; render(); window.scrollTo({top:0}); if(run.festa.length){ confete(); setTimeout(somFesta,450); } await enviarFila();
-}
-function ligarResto(){
+    run.fim=true; render(); if(run.festa.length){ confete(); setTimeout(somFesta,450); } await enviarFila();
+  });
+  $('#again')?.addEventListener('click',()=>{ if(run && (run.tipo==='simulado'||run.tipo==='pratica')){ run=null; render(); } else novaRun('treino'); });
   $('#voltar')?.addEventListener('click',()=>{ run=null; render(); });
   $('#refazer')?.addEventListener('click',()=>{ const qs=run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>{ const correta=q.options[q.a]; const sh=shuffle(q.options); return {...q,options:sh,a:sh.indexOf(correta),reforco:false,revisao:false,antes:null}; }); iniciarRun(qs,'refazer'); render(); window.scrollTo({top:0}); });
-  $('#estudar-erros')?.addEventListener('click',()=>{ const e=[...new Set(run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>q.skill))]; run=null; view='estudar'; render(); $('#view').innerHTML=telaEstudar(e.length?e:null); window.scrollTo({top:0,behavior:'smooth'}); });
+  $('#estudar-erros')?.addEventListener('click',()=>{ const e=[...new Set(run.qs.filter((q,i)=>run.resp[i]!==q.a).map(q=>q.skill))]; run=null; view='estudar'; estudarFoco=e.length?e:null; render(); window.scrollTo({top:0,behavior:'smooth'}); });
   document.querySelectorAll('[data-serie]').forEach(b=>b.addEventListener('click',()=>{ cfg.maiaSerie=+b.dataset.serie; saveCfg(); render(); }));
   $('#salvameta')?.addEventListener('click',()=>{ const n=Math.round(+$('#metaq').value), p=$('#metap').value.trim();
     if(!(n>=20)){ $('#msgmeta').textContent='Use uma meta de pelo menos 20 questões.'; return; }
