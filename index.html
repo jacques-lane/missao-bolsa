@@ -188,11 +188,44 @@ function autoFill(c){
   const step = dec ? 1 : Math.max(1, Math.round(Math.abs(v)*0.1));
   return k => { const nv=v+(k%2?1:-1)*step*Math.ceil(k/2); if(nv<0) return '-'; return (m[1]||'')+(dec? nv.toFixed(dec).replace('.',',') : N(nv))+m[3]; };
 }
+/* Valor numérico de uma alternativa (inteiro, decimal com vírgula, R$, fração, hora, com unidade) — null se não for número. */
+function valorOp(x){ const t=String(x).trim(); let m;
+  if((m=t.match(/^(\d+)\/(\d+)$/))) return m[1]/m[2];
+  if((m=t.match(/^(\d+)h(\d\d)$/))) return (+m[1])*60+(+m[2]);
+  if((m=t.match(/^(?:R\$ )?(\d{1,3}(?:\.\d{3})*|\d+)(,\d+)?(?: ?(?:cm²|cm|dm|m²|m))?$/))) return parseFloat(m[1].replace(/\./g,'')+(m[2]?'.'+m[2].slice(1):''));
+  return null; }
+/* Monta as 4 alternativas. v18: a certa cai em qualquer posição de tamanho (pode ser a menor, a maior ou do meio, sorteado),
+   para não dar para acertar só descartando a maior e a menor. As erradas preferem os erros comuns informados. */
 function mc(correct, wrongs, fill){
-  const c = String(correct); fill = fill || autoFill(c); const set = new Set([c]); const opts=[c];
-  for(const w of wrongs){ const s=String(w); if(!set.has(s) && s!=='NaN' && !/^(R\$ )?-/.test(s)){ set.add(s); opts.push(s); } if(opts.length===4) break; }
-  let k=1; while(opts.length<4 && fill){ const s=String(fill(k++)); if(!set.has(s) && !/^(R\$ )?-/.test(s)){ set.add(s); opts.push(s);} if(k>40) break; }
+  const c = String(correct); fill = fill || autoFill(c);
+  const ok = w => w!=='NaN' && w!=='-' && w!==c && !/^(R\$ )?-/.test(w) && !/undefined|Infinity/.test(w);
+  const vc = valorOp(c);
+  const dados=[...new Set(wrongs.map(String))].filter(ok);
+  const extra=[]; if(fill) for(let k=1;k<=40;k++){ const w=String(fill(k)); if(ok(w)) extra.push(w); }
+  const fm=c.match(/^(\d+)\/(\d+)$/); if(fm) for(let k=1;k<=12;k++){ extra.push(`${+fm[1]+k}/${fm[2]}`); if(+fm[1]-k>0) extra.push(`${+fm[1]-k}/${fm[2]}`); }
+  const cand=[...new Set([...dados,...extra])].filter(ok);
+  if(vc!=null && cand.length>=3 && cand.every(w=>valorOp(w)!=null)){
+    const vistos=new Set([vc]); const uni=[]; for(const w of cand){ const v=valorOp(w); if(!vistos.has(v)){ vistos.add(v); uni.push({w,v,dado:dados.includes(w)}); } }
+    const ord=l=>l.sort((x,y)=>(y.dado-x.dado)||(Math.abs(x.v-vc)-Math.abs(y.v-vc)));
+    const abaixo=ord(uni.filter(o=>o.v<vc)), acima=ord(uni.filter(o=>o.v>vc));
+    const ranks=[0,1,2,3].filter(r=>abaixo.length>=r && acima.length>=3-r);
+    if(ranks.length){ const r=pick(ranks); const opts=[c,...abaixo.slice(0,r).map(o=>o.w),...acima.slice(0,3-r).map(o=>o.w)];
+      const sh=shuffle(opts); return { options: sh, a: sh.indexOf(c) }; }
+  }
+  const set = new Set([c]); const opts=[c];
+  for(const w of [...dados,...extra]){ if(!set.has(w)){ set.add(w); opts.push(w); } if(opts.length===4) break; }
   const sh = shuffle(opts); return { options: sh, a: sh.indexOf(c) };
+}
+
+/* v18 — tabuada do 6 ao 9 (Maya): três formas (conta direta, fator que falta, divisão de volta). Cada questão guarda o fato (ex.: "7x8") para o Painel. */
+const TRUQUE_TAB={6:m=>`6 × ${m} = 5 × ${m} + ${m} = ${5*m} + ${m} = ${6*m}.`, 7:m=>`7 × ${m} = 5 × ${m} + 2 × ${m} = ${5*m} + ${2*m} = ${7*m}.`, 8:m=>`8 × ${m} é dobrar ${m} três vezes: ${2*m}, ${4*m}, ${8*m}.`, 9:m=>`9 × ${m} = 10 × ${m} − ${m} = ${10*m} − ${m} = ${9*m}.`};
+const semZero=m=>k=>{ const v=m+(k%2?1:-1)*Math.ceil(k/2); return v>0?String(v):'-'; };   // alternativas sem 0 ("0 em cada envelope" não faz sentido)
+function tabuadaQ(n){
+  const m=rnd(2,10), p=n*m, forma=pick(['direta','direta','falta','divide']), fato=`${n}x${m}`;
+  if(forma==='direta') return { q:pick([`Quanto é ${n} × ${m}?`,`Quanto é ${m} × ${n}?`,`Na loja da mamãe, cada buquê leva ${n} rosas. Quantas rosas a mamãe usa em ${m} buquês?`,`Cada caixinha tem ${n} brigadeiros. Quantos brigadeiros há em ${m} caixinhas? (O papai já está de olho.)`,`Na aula de órgão, a Maya toca ${n} notas em cada compasso. Quantas notas ela toca em ${m} compassos?`]),
+    ...mc(p,[p+n,p-n,p+1,p-1,p+10,(n+1)*m,(n-1)*m]), ex:`${n} × ${m} = ${p}. Truque: ${TRUQUE_TAB[n](m)}`, fato };
+  if(forma==='falta') return { q:`Complete: ${n} × ___ = ${p}`, ...mc(m,[m+1,m-1,m+2,m-2].filter(x=>x>0),semZero(m)), ex:`Pergunte: "${n} vezes quanto dá ${p}?". ${n} × ${m} = ${p}. Truque: ${TRUQUE_TAB[n](m)}`, fato };
+  return { q:pick([`Quanto é ${p} ÷ ${n}?`,`A Maya tem ${p} adesivos para dividir igualmente em ${n} envelopes. Quantos em cada envelope?`]), ...mc(m,[m+1,m-1,m+2,m-2].filter(x=>x>0),semZero(m)), ex:`É a tabuada do ${n} ao contrário: ${n} × ${m} = ${p}, então ${p} ÷ ${n} = ${m}.`, fato };
 }
 
 /* ================= perfis ================= */
@@ -211,6 +244,7 @@ const SKILLS = {
     valor_posicional:{nome:'Valor posicional',mat:true}, adicao:{nome:'Adição',mat:true}, subtracao:{nome:'Subtração',mat:true},
     multiplicacao:{nome:'Multiplicação',mat:true}, divisao:{nome:'Divisão',mat:true}, fracoes:{nome:'Frações',mat:true},
     dinheiro:{nome:'Dinheiro e troco',mat:true}, tempo:{nome:'Horas e minutos',mat:true}, perimetro:{nome:'Perímetro',mat:true},
+    tabuada6:{nome:'Tabuada do 6',mat:true}, tabuada7:{nome:'Tabuada do 7',mat:true}, tabuada8:{nome:'Tabuada do 8',mat:true}, tabuada9:{nome:'Tabuada do 9',mat:true},
     ortografia:{nome:'Ortografia'}, pontuacao:{nome:'Pontuação'}, classes:{nome:'Tipos de palavras'},
     sinonimos:{nome:'Sinônimos e antônimos'}, plural:{nome:'Singular e plural'}, interpretacao:{nome:'Interpretação de texto'}
   },
@@ -265,7 +299,9 @@ const GEN = {
       if(nv===3){
         const d=rnd(3,9), q=rnd(3,L>=5?12:9), r=rnd(1,d-1), n=d*q+r;
         const f=(a,b)=>`${a} para cada, ${b===1?'sobra 1':'sobram '+b}`;
-        const erradas=[f(q+1,r),f(q-1,r+d),f(q,r===d-1?r-1:r+1),f(q+1,Math.max(1,r-1)),f(q-1,r)];
+        // v18: o quociente certo pode ser o menor, o maior ou do meio (sorteado); uma errada é o erro clássico (resto maior que o divisor)
+        const abaixo=shuffle([1,2,3].filter(o=>q-o>=1)), acima=shuffle([1,2,3]); const r0=pick([0,1,2,3].filter(x=>x<=abaixo.length));
+        const erradas=[...abaixo.slice(0,r0).map(o=>o===1?f(q-1,r+d):f(q-o,rnd(1,d-1))),...acima.slice(0,3-r0).map(o=>f(q+o,rnd(1,d-1)))];
         const ped=pick([[`A mamãe tem ${n} rosas e vai montar ${d} buquês iguais, com o máximo de rosas em cada um.`,'Quantas rosas vão em cada buquê e quantas sobram?'],[`${n} adesivos de maquiagem vão ser divididos igualmente entre ${d} amigas.`,'Quantos para cada uma e quantos sobram?'],[`A Maya tem ${n} pães de queijo para dividir igualmente entre ${d} pratos.`,'Quantos em cada prato e quantos sobram (para a disputa com o papai)?']]);
         return { q:ped.join(' '), ...mc(f(q,r),erradas,null),
           ex:`Procure na tabuada do ${d} o maior resultado que não passa de ${n}: ${d} × ${q} = ${d*q}. Sobram ${n} − ${d*q} = ${r}. O resto é sempre menor que ${d}: se sobrar ${d} ou mais, dá para dar mais um para cada.` };
@@ -303,7 +339,8 @@ const GEN = {
       const p=2*(w+h);
       return { q:`O tapete do quarto da Maya é retangular: ${w} dm de comprimento e ${h} dm de largura. Quantos decímetros de fita são precisos para contornar o tapete todo?`, ...mc(p,[w*h,w+h,2*w+h,p+2]),
         ex:`Perímetro é a volta inteira: ${w} + ${h} + ${w} + ${h} = ${p} dm. (A área seria ${w} × ${h} = ${w*h} dm², que é outra coisa.)` };
-    }
+    },
+    tabuada6(){ return tabuadaQ(6); }, tabuada7(){ return tabuadaQ(7); }, tabuada8(){ return tabuadaQ(8); }, tabuada9(){ return tabuadaQ(9); }
   },
   jaquinho: {
     expressoes(){
@@ -362,6 +399,70 @@ const GEN = {
       let c; do{ c=rnd(100,999); }while(c%k); const ws=new Set(); while(ws.size<3){ const w=rnd(100,999); if(w%k) ws.add(w); }
       return { q:`Qual destes números é divisível por ${k}?`, ...mc(c,[...ws]), ex:`Um número é divisível por ${k} quando ${regras[k]}. ${c} ÷ ${k} = ${c/k}.` };
     }
+  }
+};
+
+/* v18 — questões de nível desafio do Jaquinho (mais de um passo, números maiores). Usadas por questaoMat quando o assunto está dominado. */
+const DESAFIO = {
+  expressoes(){
+    if(Math.random()<.5){ let a,b,c,d,r; do{ a=rnd(2,9); b=rnd(2,9); c=rnd(2,6); d=rnd(2,6); r=(a+b)*c-d*d; }while(r<=0);
+      return { q:`Quanto vale a expressão (${a} + ${b}) × ${c} − ${d}²?`, ...mc(r,[a+b*c-d*d,(a+b)*c-2*d,(a+b)*c+d*d,(a+b)*(c-d)]),
+        ex:`Ordem: parênteses → potência → multiplicação → subtração. (${a} + ${b}) = ${a+b}; ${d}² = ${d*d}; ${a+b} × ${c} = ${(a+b)*c}; ${(a+b)*c} − ${d*d} = ${r}.` }; }
+    let a,b,c,d,e,r; do{ a=rnd(6,12); b=rnd(2,15); d=rnd(1,5); c=d+rnd(1,5); e=rnd(2,5); r=a*a-(b+(c-d)*e); }while(r<=0);
+    return { q:`Quanto vale a expressão ${a}² − [${b} + (${c} − ${d}) × ${e}]?`, ...mc(r,[a*a-b+(c-d)*e,a*a-(b+c-d)*e,a*2-(b+(c-d)*e),a*a-(b+(c-d)*e)+e]),
+      ex:`De dentro para fora: (${c} − ${d}) = ${c-d}; × ${e} = ${(c-d)*e}; colchete: ${b} + ${(c-d)*e} = ${b+(c-d)*e}. Potência: ${a}² = ${a*a}. Resultado: ${a*a} − ${b+(c-d)*e} = ${r}.` };
+  },
+  potencias(){
+    const a=rnd(2,9), b=rnd(2,4), c=rnd(2,5), r=a*a+b**3*c;
+    return { q:`Quanto é ${a}² + ${b}³ × ${c}?`, ...mc(r,[(a*a+b**3)*c,a*2+b*3*c,a*a+b*3*c,a*a+b**3+c]),
+      ex:`Primeiro as potências: ${a}² = ${a*a} e ${b}³ = ${b**3}. Depois a multiplicação: ${b**3} × ${c} = ${b**3*c}. Por fim a soma: ${a*a} + ${b**3*c} = ${r}.` };
+  },
+  mmc_mdc(){
+    if(Math.random()<.5){ const t=pick([[4,6,8],[3,4,6],[6,8,12],[4,5,6],[2,3,5],[6,9,12],[5,6,10],[3,5,6],[4,6,9]]); const r=lcm(lcm(t[0],t[1]),t[2]);
+      return { q:`No sítio, três lanternas piscam juntas agora. Uma pisca a cada ${t[0]} segundos, outra a cada ${t[1]} e a terceira a cada ${t[2]}. Daqui a quantos segundos as três vão piscar juntas de novo?`, ...mc(r,[t[0]*t[1]*t[2],lcm(t[0],t[1]),r*2,t[0]+t[1]+t[2]]),
+        ex:`É o MMC de ${t.join(', ')}. MMC(${t[0]}, ${t[1]}) = ${lcm(t[0],t[1])}; MMC com ${t[2]} = ${r}.` }; }
+    const [A,B]=pick([[48,72],[36,60],[84,126],[90,150],[54,90],[60,84],[72,108],[45,75]]); const r=gcd(A,B);
+    return { q:`O papai tem duas tábuas, uma de ${A} cm e outra de ${B} cm, e quer cortar as duas em pedaços iguais, do maior tamanho possível, sem sobrar nada. Qual será o tamanho de cada pedaço?`, ...mc(r+' cm',[lcm(A,B)+' cm',r/2+' cm',r*2+' cm',(B-A)+' cm']),
+      ex:`É o MDC de ${A} e ${B}: o maior número que divide os dois. ${A} ÷ ${r} = ${A/r} e ${B} ÷ ${r} = ${B/r}. Cada pedaço: ${r} cm.` };
+  },
+  fracoes_soma(){
+    let b,d,a,c,n,m,sinal; do{ b=rnd(3,12); d=rnd(3,12); a=rnd(1,b-1); c=rnd(1,d-1); sinal=pick(['+','−']); m=b*d; n=sinal==='+'?a*d+c*b:a*d-c*b; }while(b===d || n<=0 || gcd(a,b)>1 || gcd(c,d)>1);
+    const certo=frac(n,m), errado=sinal==='+'?frac(a+c,b+d):(a>c?frac(a-c,Math.abs(b-d)||1):frac(a+c,b+d));
+    const q=pick([`Quanto é ${a}/${b} ${sinal} ${c}/${d}? (simplifique se der)`, sinal==='+'?`O Jaquinho estudou ${a}/${b} de hora de manhã e ${c}/${d} de hora à tarde. Quanto tempo ele estudou ao todo, em fração de hora? (simplifique se der)`:`Uma garrafa tinha ${a}/${b} de litro de suco e o Daniel bebeu ${c}/${d} de litro. Quanto sobrou, em fração de litro? (simplifique se der)`]);
+    return { q, ...mc(certo,[errado,frac(n+1,m),frac(Math.max(1,n-1),m),frac(n,m+1)]),
+      ex:`Borboleta: asas ${a} × ${d} = ${a*d} e ${c} × ${b} = ${c*b}; corpo ${b} × ${d} = ${m}. ${a*d} ${sinal} ${c*b} = ${n} → ${n}/${m}${certo!==n+'/'+m?' = '+certo+' (simplificado)':''}.` };
+  },
+  fracao_quantidade(){
+    let b,d,a,c,T; do{ b=pick([2,3,4,5]); d=pick([2,3,4,5]); a=rnd(1,b-1); c=rnd(1,d-1); T=b*d*rnd(2,8); }while(false);
+    const g1=T*a/b, resto=T-g1, g2=resto*c/d, r=resto-g2;
+    return { q:`O Jaquinho tinha R$ ${N(T)}. Gastou ${a}/${b} com cordas para o violino e depois ${c}/${d} do que sobrou com um lanche. Com quanto ele ficou?`, ...mc('R$ '+N(r),['R$ '+N(Math.max(1,T-g1-T*c/d)),'R$ '+N(resto),'R$ '+N(g2),'R$ '+N(r+b)]),
+      ex:`Cordas: ${a}/${b} de ${T} = ${g1}. Sobraram ${resto}. Lanche: ${c}/${d} de ${resto} (do que SOBROU, não do total) = ${g2}. Ficou com ${resto} − ${g2} = ${r}.` };
+  },
+  decimais(){
+    const x=rnd(105,989), k=rnd(3,9), r=x*k;
+    return { q:pick([`Quanto é ${dec2(x)} × ${k}?`,`Uma corda de violino custa R$ ${dec2(x)}. Quanto custam ${k} cordas?`]), ...mc(dec2(r),[dec2(r*10),dec2(r+100),dec2(r-k),dec2(x*k+x)]),
+      ex:`Faça como número inteiro: ${x} × ${k} = ${r}. Depois conte as casas depois da vírgula (2) e coloque a vírgula: ${dec2(r)}.` };
+  },
+  porcentagem(){
+    if(Math.random()<.5){ let P,a,b,c; do{ P=rnd(4,40)*10; a=pick([10,20,25,50]); b=pick([10,20,25,50]); c=P*(100+a)*(100-b)/100; }while(!Number.isInteger(c));
+      return { q:`Um estojo de violino custava R$ ${N(P)}. O preço subiu ${a}% e, depois, entrou numa promoção com ${b}% de desconto sobre o novo preço. Quanto ficou?`, ...mc(reais(c),[reais(P*(100+a-b)),reais(P*100),reais(P*(100+a)),reais(Math.round(c*1.1))]),
+        ex:`Aumento: ${N(P)} + ${a}% = ${reais(P*(100+a))}. Desconto de ${b}% sobre esse novo preço: ${reais(c)}. Não dá para só fazer ${a}% − ${b}%: o desconto é sobre o preço já aumentado.` }; }
+    const [T,X]=pick([[20,5],[25,5],[40,10],[50,15],[80,20],[200,50],[40,6],[25,10],[50,35],[80,60],[20,13],[200,30]]); const r=X/T*100;
+    return { q:`Numa prova com ${T} questões, o Jaquinho acertou ${X}. Que porcentagem da prova ele acertou?`, ...mc(r+'%',[X+'%',(100-r)+'%',(r/2)+'%',(T-X)+'%']),
+      ex:`Porcentagem = parte ÷ total × 100 = ${X} ÷ ${T} × 100 = ${r}%.` };
+  },
+  area(){
+    if(Math.random()<.5){ let W,H,w,h; do{ W=rnd(8,16); H=rnd(6,12); w=rnd(2,W-3); h=rnd(2,H-3); }while(false); const r=W*H-w*h;
+      return { q:`Um terreno no sítio tem forma de L: é um retângulo de ${W} m por ${H} m, do qual foi tirado um canto retangular de ${w} m por ${h} m. Qual é a área do terreno?`, ...mc(r+' m²',[W*H+' m²',(W*H+w*h)+' m²',(2*(W+H))+' m²',(r-w)+' m²']),
+        ex:`Área do retângulo grande: ${W} × ${H} = ${W*H} m². Tire o canto: ${w} × ${h} = ${w*h} m². ${W*H} − ${w*h} = ${r} m².` }; }
+    const [L,A,t]=pick([[200,120,20],[300,200,20],[240,160,40],[200,100,25],[180,120,30],[160,80,20]]); const r=(L/t)*(A/t);
+    return { q:`O papai vai cobrir uma parede de ${L/100} m por ${(A/100).toString().replace('.',',')} m com azulejos quadrados de ${t} cm de lado. Quantos azulejos ele vai usar?`, ...mc(r,[L*A/t,(L+A)/t,r*2,L/t+A/t]),
+      ex:`Passe tudo para centímetros: ${L} cm por ${A} cm. Cabem ${L} ÷ ${t} = ${L/t} azulejos no comprimento e ${A} ÷ ${t} = ${A/t} na altura: ${L/t} × ${A/t} = ${r} azulejos.` };
+  },
+  divisibilidade(){
+    const k=pick([3,4,6,9]); let N0; do{ N0=rnd(1000,9999); }while(N0%k===0); const r=(k-N0%k)%k;
+    return { q:`Qual é o MENOR número natural que devemos somar a ${N(N0)} para ele ficar divisível por ${k}?`, ...mc(r,[N0%k,k-1===r?r-1:k-1,r+1,r+k].filter(x=>x>=0)),
+      ex:`${N(N0)} ÷ ${k} deixa resto ${N0%k}. Faltam ${k} − ${N0%k} = ${r} para completar o próximo múltiplo de ${k}: ${N(N0+r)}.` };
   }
 };
 
@@ -479,6 +580,10 @@ const LICOES = {
     dinheiro:['Troco sem susto','Troco é o que sobra: o que você pagou menos o que custou. Trabalhe com os centavos como se fossem números normais.','Pagou R$ 10,00 num batom de R$ 6,50: 10,00 − 6,50 = R$ 3,50. Sobra para um esmalte?','Dica: complete até o próximo real. De 6,50 para 7,00 faltam 0,50; de 7 para 10, faltam 3. Total 3,50.'],
     tempo:['O relógio maluco','Uma hora tem 60 minutos, não 100! Quando os minutos passam de 60, vira mais uma hora.','A aula de órgão começa 14h40 e dura 30 min: 14h70?? Não! 70 min = 1h10 → 15h10.','Some os minutos primeiro e veja se passou de 60.'],
     perimetro:['A volta completa','Perímetro é o tamanho da volta inteira, como a cerca de um quintal. Some todos os lados.','Retângulo de 5 m por 3 m: 5 + 3 + 5 + 3 = 16 m.','Não confunda: área é o espaço de dentro (5 × 3 = 15 m²).'],
+    tabuada6:["Tabuada do 6: o 5 ajuda", "Toda conta do 6 é a conta do 5 mais uma vez o número. Como a do 5 é fácil (metade da do 10), a do 6 fica fácil também.", "6 × 7 → 5 × 7 = 35, mais 7 = 42. 6 × 8 → 40 + 8 = 48 (rima: \"seis vezes oito, quarenta e oito\").", "Nos números pares, o resultado termina com o mesmo algarismo: 6 × 2 = 12, 6 × 4 = 24, 6 × 6 = 36, 6 × 8 = 48."],
+    tabuada7:["Tabuada do 7: 5 mais 2", "O 7 é 5 + 2. Então 7 × um número = 5 vezes o número + 2 vezes o número.", "7 × 8 → 5 × 8 = 40 e 2 × 8 = 16 → 40 + 16 = 56 (lembre da sequência 5, 6, 7, 8: 56 = 7 × 8).", "7 × 7 = 49 é o \"quadrado\" da tabuada: vale decorar de cor."],
+    tabuada8:["Tabuada do 8: dobra, dobra, dobra", "Multiplicar por 8 é dobrar três vezes. 8 × 6: dobro de 6 = 12, dobro de 12 = 24, dobro de 24 = 48.", "8 × 7 → 7, 14, 28, 56. 8 × 9 → 9, 18, 36, 72.", "Os resultados do 8 são sempre pares e os finais repetem: 8, 6, 4, 2, 0 (8, 16, 24, 32, 40…)."],
+    tabuada9:["Tabuada do 9: o truque do 10", "9 vezes um número é 10 vezes o número menos uma vez ele. 9 × 7 = 70 − 7 = 63.", "Truque dos dedos: para 9 × 4, abaixe o 4º dedo. Ficam 3 dedos à esquerda e 6 à direita: 36.", "Nos resultados do 9, os algarismos somam 9: 18 (1+8), 27, 36, 45, 54, 63, 72, 81."],
     ortografia:['Detetive das letras','Algumas letras parecem iguais no som, mas cada palavra tem seu jeito certo. As pistas ajudam!','Antes de p e b usa m: campo, bombom. Entre vogais, ss faz som de s: pássaro.','Ficou na dúvida? Pense em outra palavra da mesma família: chuva → chuvoso.'],
     pontuacao:['Os sinais que falam','Os sinais mostram como ler a frase. Ponto final termina, interrogação pergunta, exclamação emociona.','Você vem? (pergunta)  Que legal! (emoção)  Comprei pão, leite e ovo. (lista)','Leia em voz alta: a voz sobe na pergunta e fica forte na exclamação.'],
     classes:['O time das palavras','Substantivo dá nome (gato, escola). Adjetivo diz como é (preto, alegre). Verbo é ação (correr, dormir).','"O cachorro feliz correu": cachorro = nome, feliz = como é, correu = ação.','Para achar o verbo, pergunte: o que alguém fez?'],
@@ -546,6 +651,10 @@ const DET = {
       e:[['Retângulo de 6 m por 4 m','6 + 4 + 6 + 4 = 20 m.'],['Quadrado de lado 5 cm','4 × 5 = 20 cm.']],
       x:['Multiplicar os lados (isso é área, não perímetro).','Somar só os dois lados escritos e esquecer os outros dois.'],
       d:'O tapete da Maya tem 8 dm por 3 dm. Quanto de fita para contornar?'},
+    tabuada6:{"p": ["Lembre a conta do 5 (metade da do 10).", "Some mais uma vez o número.", "Confira dividindo: o resultado ÷ 6 tem que dar o número."], "e": [["6 × 9", "5 × 9 = 45, mais 9 = 54."], ["6 × 6", "5 × 6 = 30, mais 6 = 36."], ["48 ÷ 6", "6 × 8 = 48, então 48 ÷ 6 = 8."]], "x": ["Confundir 6 × 7 = 42 com 6 × 8 = 48.", "Somar 6 + 7 em vez de multiplicar."], "d": "Faça a tabuada do 6 inteira no caderno, do 6 × 2 ao 6 × 10, usando o truque do 5."},
+    tabuada7:{"p": ["Separe o 7 em 5 + 2.", "Faça 5 × o número e 2 × o número.", "Some os dois resultados."], "e": [["7 × 6", "5 × 6 = 30 e 2 × 6 = 12 → 42."], ["7 × 9", "5 × 9 = 45 e 2 × 9 = 18 → 63."], ["56 ÷ 7", "7 × 8 = 56, então 56 ÷ 7 = 8."]], "x": ["Trocar 7 × 8 = 56 por 54 ou 58.", "Esquecer de somar a parte do 2."], "d": "Faça a tabuada do 7 inteira no caderno, separando sempre em 5 + 2."},
+    tabuada8:{"p": ["Pegue o número.", "Dobre uma vez, dobre de novo e dobre mais uma vez.", "O terceiro dobro é o resultado."], "e": [["8 × 6", "6 → 12 → 24 → 48."], ["8 × 8", "8 → 16 → 32 → 64."], ["72 ÷ 8", "8 × 9 = 72, então 72 ÷ 8 = 9."]], "x": ["Dobrar só duas vezes (isso é × 4).", "Confundir 8 × 7 = 56 com 8 × 6 = 48."], "d": "Faça a tabuada do 8 inteira no caderno usando os três dobros."},
+    tabuada9:{"p": ["Faça 10 × o número (é só pôr um zero).", "Tire uma vez o número.", "Confira: os algarismos do resultado somam 9."], "e": [["9 × 8", "80 − 8 = 72 (7 + 2 = 9)."], ["9 × 6", "60 − 6 = 54 (5 + 4 = 9)."], ["81 ÷ 9", "9 × 9 = 81, então 81 ÷ 9 = 9."]], "x": ["Tirar 9 em vez de tirar o número (9 × 7 = 70 − 7, não 70 − 9).", "Trocar a ordem dos algarismos (63 e 36)."], "d": "Faça a tabuada do 9 inteira no caderno e confira se os algarismos de cada resultado somam 9."},
     ortografia:{p:['Antes de P e B, use M: campo, bombom, sempre.','Entre vogais, S tem som de Z (casa, rosa); para som de S, use SS (pássaro, massa).','Ç só aparece antes de A, O e U (maçã, açúcar). Antes de E e I, usa-se C (cereja, cinema).','RR entre vogais faz som forte (carro); um R só faz som fraco (caro).','Na dúvida entre CH e X, lembre de uma palavra da mesma família: chuva → chuvoso.'],
       e:[['Ca__a (onde a gente mora)','Casa, com um S: entre vogais, faz som de Z.'],['Ma__ã (a fruta)','Maçã, com Ç: antes do A.']],
       x:['Escrever "çe" ou "çi": não existe!','Escrever "canpo" com N antes do P.'],
@@ -821,6 +930,10 @@ const DET2 = {
     dinheiro:{j:'Use dinheiro de brincadeira ou de verdade: pegue as notas e moedas e faça o troco "na mão", contando do preço até o valor pago. É assim que se faz no caixa da loja.',e:[['Preço R$ 4,00, paga com R$ 10,00','De 4 até 10 faltam 6. Troco: R$ 6,00.'],['Preço R$ 7,50, paga com R$ 10,00','De 7,50 até 8,00 faltam 0,50; de 8 até 10 faltam 2. Troco: R$ 2,50.']],r:'troco dinheiro'},
     tempo:{j:'Desenhe um relógio e ande com o ponteiro. Toda vez que o ponteiro grande dá uma volta inteira (60 minutos), o pequeno anda uma hora.',e:[['8h50 + 20 minutos','Até 9h00 faltam 10 minutos; sobram mais 10. Resultado: 9h10.'],['De 10h30 até 12h00','10h30 → 11h00 = 30 min; 11h00 → 12h00 = 60 min. Total: 1 hora e meia.']],r:'horas e minutos'},
     perimetro:{j:'Imagine uma formiguinha andando em volta da figura: perímetro é o caminho inteiro que ela faz até voltar ao ponto de partida.',e:[['Triângulo de lados 3, 4 e 5 cm','3 + 4 + 5 = 12 cm.'],['Retângulo de 10 m por 2 m','10 + 2 + 10 + 2 = 24 m.']],r:'perímetro'},
+    tabuada6:{"j": "Pense em caixinhas com 6 brigadeiros: é uma caixinha de 5 mais 1 brigadeiro extra. Conta as de 5 (fácil) e junta os extras.", "e": [["6 × 4", "4 caixinhas de 5 = 20, mais 4 extras = 24."], ["6 × 7", "35 + 7 = 42."]], "r": "tabuada do 6"},
+    tabuada7:{"j": "Uma semana tem 7 dias: 5 dias de escola + 2 de fim de semana. Para 7 × 4 (4 semanas): 4 × 5 = 20 dias de escola e 4 × 2 = 8 de fim de semana: 28 dias.", "e": [["7 × 3", "15 + 6 = 21."], ["7 × 8", "40 + 16 = 56."]], "r": "tabuada do 7"},
+    tabuada8:{"j": "Imagine o James pedindo mamadeira: cada vez que ele pede, o número dobra. Três pedidos seguidos = vezes 8!", "e": [["8 × 3", "3 → 6 → 12 → 24."], ["8 × 9", "9 → 18 → 36 → 72."]], "r": "tabuada do 8"},
+    tabuada9:{"j": "Use os 10 dedos: abaixe o dedo do número que você quer multiplicar por 9. Dedos à esquerda = dezenas, dedos à direita = unidades.", "e": [["9 × 3", "Abaixe o 3º dedo: 2 à esquerda e 7 à direita = 27."], ["9 × 8", "Abaixe o 8º dedo: 7 e 2 = 72."]], "r": "tabuada do 9 truque dos dedos"},
     ortografia:{j:'Leia a palavra em voz alta, devagar, e preste atenção no som. Depois, pense numa palavra da mesma família: ela costuma usar a mesma letra.',e:[['Massa ou maça?','Massa (de bolo) tem SS. Maçã (fruta) tem Ç e til. Som parecido, palavras diferentes!'],['Chave ou xave?','Chave, com CH. Da família de chaveiro.']],r:'ortografia'},
     pontuacao:{j:'Leia a frase em voz alta. Se sua voz sobe no fim, é pergunta (?). Se fala com emoção, é exclamação (!). Se só conta algo, é ponto final (.).',e:[['Você trouxe o laço','A voz sobe: "Você trouxe o laço?"'],['Que susto','Emoção: "Que susto!"']],r:'pontuação sinais'},
     classes:{j:'Faça três perguntas: Qual é o NOME? (substantivo). COMO ele é? (adjetivo). O que ele FAZ? (verbo).',e:[['"A borboleta colorida voou."','Nome: borboleta. Como é: colorida. O que faz: voou.'],['"O bolo gostoso acabou."','Nome: bolo. Como é: gostoso. O que fez: acabou.']],r:'substantivo adjetivo verbo'},
@@ -856,10 +969,207 @@ const refLinks = termo => [
 
 /* ================= banco de Português unificado (PT antigo + PTX novo) ================= */
 const BANCO_PT={};
+/* v18 — banco extra de Português do Jaquinho (~175 questões novas + textos j8, j9, j10). Ids kid-ptx3-<assunto>-<posição>: sempre acrescentar no FIM. */
+Object.assign(TX, {"j8": "O Vale do Ribeira, onde fica Juquiá, guarda um dos maiores trechos contínuos de Mata Atlântica do Brasil. Essa floresta já cobriu boa parte do litoral do país, mas hoje restam pouco mais de 12% da área original. Mesmo assim, ela abriga milhares de espécies de plantas e animais, muitas das quais não existem em nenhum outro lugar do planeta. A mata também protege nascentes e rios: as raízes das árvores seguram o solo e ajudam a água da chuva a se infiltrar devagar, abastecendo a água que fica debaixo da terra. Quando a floresta é derrubada, a terra fica exposta, a chuva arrasta o solo para os rios e as enchentes ficam mais fortes. Por isso, cientistas defendem que preservar a mata não é só cuidar dos bichos: é garantir água para as cidades.", "j9": "Faltavam dois dias para a apresentação de violino e o Jaquinho ainda tropeçava no mesmo trecho da música. Em vez de tocar a peça inteira várias vezes, como fazia antes, ele resolveu mudar a estratégia: separou só os quatro compassos difíceis e tocou bem devagar, aumentando a velocidade aos poucos. O Daniel, que estava de visita, achou aquilo um tédio. — Toca logo a música toda, primo! Assim é mais legal. O Jaquinho apenas sorriu e continuou. No dia da apresentação, quando chegou o trecho temido, os dedos foram sozinhos. Depois dos aplausos, o papai, que raramente elogiava sem motivo, disse baixinho: — Isso não foi sorte. Foi método.", "j10": "Muitas escolas brasileiras passaram a proibir o uso do celular durante as aulas e os intervalos. Os defensores da medida argumentam que, sem a tela por perto, os alunos prestam mais atenção, conversam mais uns com os outros e sofrem menos com distrações e comparações nas redes sociais. Já os críticos lembram que o celular também pode ser uma ferramenta de estudo, com dicionários, calculadoras e pesquisas. Na minha opinião, a proibição faz sentido na maior parte do tempo, mas o professor deveria poder liberar o aparelho em atividades planejadas. Afinal, o problema não é a ferramenta, e sim o uso sem objetivo."});
+const PTX3 = { jaquinho: {
+    ortografia:[
+      ["Complete: \"___ dois anos estudo violino.\"", ["Há", "A", "À", "Ah"], "Para tempo que já passou, use \"há\" (do verbo haver): há dois anos."],
+      ["Complete: \"Vou ___ escola amanhã.\"", ["à", "a", "há", "ah"], "Quem vai, vai A algum lugar; escola pede o artigo A: a + a = à (crase)."],
+      ["Complete: \"Fiquei em casa ___ estava chovendo.\"", ["porque", "por que", "por quê", "porquê"], "\"Porque\" junto e sem acento explica a causa (= pois)."],
+      ["Complete: \"___ você não veio ao ensaio?\"", ["Por que", "Porque", "Porquê", "Por quê"], "No começo de uma pergunta, \"por que\" é separado e sem acento."],
+      ["Complete: \"Estudei bastante, ___ esqueci a fórmula.\"", ["mas", "mais", "más", "mais que"], "\"Mas\" indica oposição (= porém). \"Mais\" é o contrário de menos."],
+      ["Complete: \"Ela não é uma pessoa ___.\"", ["má", "mal", "mau", "más"], "\"Mau\" é o contrário de bom; no feminino vira \"má\". \"Mal\" é o contrário de bem."],
+      ["Complete: \"O motor está funcionando ___.\"", ["mal", "mau", "má", "mais"], "\"Mal\" é o contrário de \"bem\": funciona bem / funciona mal."],
+      ["Qual palavra está escrita do jeito certo?", ["exceção", "excessão", "esceção", "ecessão"], "Exceção: com XC e Ç."],
+      ["Qual palavra está escrita do jeito certo?", ["privilégio", "previlégio", "privilégeo", "privilejio"], "Privilégio: começa com PRI."],
+      ["Qual palavra está escrita do jeito certo?", ["beneficente", "beneficiente", "benificente", "beneficênte"], "Beneficente: não tem I antes do E final."],
+      ["Qual palavra está escrita do jeito certo?", ["cabeleireiro", "cabelereiro", "cabeleleiro", "cabeleiro"], "Cabeleireiro: cabelo + -eiro, com EI duas vezes."],
+      ["Qual palavra está escrita do jeito certo?", ["empecilho", "impecilho", "empecílio", "impecílio"], "Empecilho: com E no começo e LH no final."],
+      ["Qual palavra está escrita do jeito certo?", ["mendigo", "mendingo", "mindigo", "mendiguo"], "Mendigo: sem N antes do G."],
+      ["Qual palavra está escrita do jeito certo?", ["reivindicar", "reinvindicar", "reividicar", "reinvidicar"], "Reivindicar: REI + VINDICAR. Não existe \"reinvindicar\"."],
+      ["Qual palavra está escrita do jeito certo?", ["asterisco", "asterístico", "asteristico", "astérico"], "Asterisco é o sinal *. Não tem \"-ístico\"."],
+      ["Qual palavra está escrita do jeito certo?", ["bandeja", "bandeija", "bandêja", "bamdeja"], "Bandeja: sem I antes do J."],
+      ["Qual palavra está escrita do jeito certo?", ["prazeroso", "prazeiroso", "prazerozo", "prazerosso"], "Prazeroso vem de prazer + -oso. Não tem I."],
+      ["Qual palavra está escrita do jeito certo?", ["pesquisa", "pesquiza", "pesqisa", "pesquisza"], "Pesquisa: com S."],
+      ["Qual palavra está escrita do jeito certo?", ["enxergar", "enchergar", "inxergar", "enxerguar"], "Depois de EN, usamos X: enxergar, enxada, enxugar."],
+      ["Qual palavra está escrita do jeito certo?", ["chuchu", "xuxu", "chuxu", "xuchu"], "Chuchu: com CH duas vezes."],
+      ["Complete: \"A ___ ao México foi incrível.\"", ["viagem", "viajem", "viagen", "viájem"], "O substantivo (a viagem) é com G. \"Viajem\" com J é o verbo: \"que eles viajem\"."],
+      ["Complete: \"Espero que eles ___ amanhã.\" (verbo viajar)", ["viajem", "viagem", "viagen", "viajen"], "Verbo viajar: que eu viaje, que eles viajem (com J). O substantivo é viagem (com G)."],
+      ["Complete: \"Fomos à ___ de cinema das 15h.\"", ["sessão", "seção", "cessão", "secção"], "Sessão é o tempo de uma atividade (sessão de cinema). Seção é uma parte ou setor."],
+      ["Complete: \"O livro está na ___ de esportes da biblioteca.\"", ["seção", "sessão", "cessão", "sesão"], "Seção é uma divisão, um setor (a seção de esportes)."],
+      ["Qual palavra está escrita do jeito certo?", ["vermelho", "vermelio", "vermêlho", "vermeilho"], "Vermelho: com LH."]
+    ],
+    acentuacao:[
+      ["Qual palavra está acentuada do jeito certo?", ["ônibus", "onibus", "ônibús", "onibús"], "Ônibus é proparoxítona (Ô-ni-bus), e toda proparoxítona leva acento."],
+      ["Qual palavra está acentuada do jeito certo?", ["caráter", "carater", "carátér", "cáráter"], "Ca-RÁ-ter: paroxítona terminada em R leva acento."],
+      ["Qual palavra está acentuada do jeito certo?", ["juízes", "juizes", "júizes", "juizés"], "Ju-Í-zes: o I forma hiato e é tônico, então leva acento."],
+      ["Qual palavra está acentuada do jeito certo?", ["saúde", "saude", "saúdê", "sáude"], "Sa-Ú-de: o U forma hiato e é tônico, então leva acento."],
+      ["Qual palavra está acentuada do jeito certo?", ["herói", "heroi", "héroi", "heróí"], "He-RÓI: oxítona com ditongo aberto ÓI leva acento."],
+      ["Qual palavra está acentuada do jeito certo?", ["chapéu", "chapeu", "chápeu", "chapêu"], "Cha-PÉU: ditongo aberto ÉU na sílaba tônica leva acento."],
+      ["Qual palavra está acentuada do jeito certo?", ["parabéns", "parabens", "parábens", "parabêns"], "Pa-ra-BÉNS: oxítona terminada em ENS leva acento."],
+      ["Qual palavra está acentuada do jeito certo?", ["sofá", "sofa", "sófa", "sôfa"], "So-FÁ: oxítona terminada em A leva acento."],
+      ["Qual destas palavras é proparoxítona?", ["lâmpada", "caderno", "parede", "jardim"], "LÂM-pa-da: a sílaba mais forte é a antepenúltima."],
+      ["Qual destas palavras é oxítona?", ["café", "mesa", "lápis", "árvore"], "Ca-FÉ: a sílaba mais forte é a última."],
+      ["Qual destas palavras é paroxítona?", ["caneta", "sábado", "maracujá", "pássaro"], "Ca-NE-ta: a sílaba mais forte é a penúltima. Sábado e pássaro são proparoxítonas; maracujá é oxítona."],
+      ["Por que \"lâmpada\" tem acento?", ["Toda proparoxítona leva acento", "É oxítona terminada em A", "É paroxítona terminada em A", "Porque tem hiato"], "LÂM-pa-da é proparoxítona, e todas as proparoxítonas são acentuadas."],
+      ["Por que \"café\" tem acento?", ["É oxítona terminada em E", "Toda palavra com E leva acento", "É paroxítona terminada em E", "É proparoxítona"], "Oxítonas terminadas em A, E, O (com ou sem S) e EM/ENS levam acento."],
+      ["Por que \"fácil\" tem acento?", ["É paroxítona terminada em L", "É oxítona terminada em L", "Toda palavra com L leva acento", "É proparoxítona"], "FÁ-cil: paroxítona terminada em L leva acento (como útil, difícil)."],
+      ["Qual destas palavras NÃO leva acento?", ["caju", "maracujá", "sofá", "jacaré"], "Ca-JU é oxítona terminada em U: não leva acento (como bambu, urubu)."],
+      ["Qual destas palavras NÃO leva acento?", ["ideia", "herói", "papéis", "anéis"], "Pela regra atual, ditongo aberto EI em paroxítona perdeu o acento: ideia, assembleia."],
+      ["Qual destas palavras NÃO leva acento?", ["bambu", "baú", "saída", "país"], "Bam-BU é oxítona terminada em U: sem acento. Baú, saída e país têm hiato com I ou U tônico."],
+      ["Complete: \"Eles ___ muitos livros.\" (verbo ter)", ["têm", "tem", "tém", "teem"], "No plural, o verbo ter leva acento circunflexo: ele tem, eles têm."],
+      ["Complete: \"Ela ___ um violino novo.\" (verbo ter)", ["tem", "têm", "tém", "teem"], "No singular não tem acento: ela tem. O circunflexo é só no plural (eles têm)."],
+      ["Complete: \"Eles ___ do sítio amanhã.\" (verbo vir)", ["vêm", "vem", "vém", "veem"], "Verbo vir: ele vem, eles vêm. \"Veem\" é do verbo ver."],
+      ["Complete: \"Eles ___ o show pela janela.\" (verbo ver)", ["veem", "vêem", "vêm", "vem"], "Verbo ver: ele vê, eles veem (sem acento, pela regra atual). \"Vêm\" é do verbo vir."],
+      ["Complete: \"Hoje você ___ ir comigo?\" (verbo poder, presente)", ["pode", "pôde", "póde", "podê"], "No presente é \"pode\", sem acento. \"Pôde\" é passado."],
+      ["Complete: \"Ontem ele não ___ ir ao ensaio.\" (verbo poder, passado)", ["pôde", "pode", "póde", "podê"], "No passado usamos \"pôde\", com circunflexo, para diferenciar do presente \"pode\"."],
+      ["Qual palavra está acentuada do jeito certo?", ["armazém", "armazem", "armázem", "ármazem"], "Ar-ma-ZÉM: oxítona terminada em EM leva acento."]
+    ],
+    concordancia:[
+      ["Complete: \"___ dez anos que moro aqui.\"", ["Faz", "Fazem", "Fizeram", "Façam"], "Fazer indicando tempo passado não tem sujeito e fica no singular: faz dez anos."],
+      ["Complete: \"Os Estados Unidos ___ um país grande.\"", ["são", "é", "era", "seja"], "Com o artigo no plural (OS Estados Unidos), o verbo vai para o plural: são."],
+      ["Complete: \"Deve ___ muitas questões difíceis na prova.\" (haver = existir)", ["haver", "haverem", "haverão", "houveram"], "Haver com sentido de existir fica no singular, e o verbo que o acompanha também: deve haver."],
+      ["Complete: \"___ vários erros na correção.\" (haver = existir, no passado)", ["Houve", "Houveram", "Haviam", "Ouve"], "Haver = existir não vai para o plural: houve vários erros. \"Ouve\" é do verbo ouvir."],
+      ["Complete: \"Seguem ___ as fotos do show.\"", ["anexas", "anexo", "anexa", "anexos"], "\"Anexo\" concorda com o substantivo: as fotos seguem anexas."],
+      ["Complete: \"Elas ___ prepararam o lanche.\"", ["mesmas", "mesmo", "mesma", "mesmos"], "\"Mesmo\" no sentido de \"elas próprias\" concorda: elas mesmas."],
+      ["Complete: \"Os meninos ficaram ___ cansados.\" (= um pouco)", ["meio", "meios", "meias", "meia"], "\"Meio\" no sentido de \"um pouco\" é advérbio e não muda: meio cansados."],
+      ["Complete: \"Comi ___ pizza.\" (= metade)", ["meia", "meio", "meias", "meios"], "\"Meio\" no sentido de metade concorda com o substantivo: meia pizza."],
+      ["Complete: \"Elas ficaram ___ em casa.\" (= sozinhas)", ["sós", "só", "sozinho", "sozinha"], "\"Só\" no sentido de sozinho concorda: elas ficaram sós."],
+      ["Complete: \"Nós ___ ao Renascer ontem.\"", ["fomos", "foram", "foi", "fui"], "Sujeito \"nós\" pede o verbo na 1ª pessoa do plural: nós fomos."],
+      ["Complete: \"O pessoal do Renascer ___ para o sítio.\"", ["foi", "foram", "fomos", "fôramos"], "\"Pessoal\" é um substantivo coletivo no singular: o pessoal foi."],
+      ["Complete: \"A turma ___ muito no passeio.\"", ["se divertiu", "se divertiram", "nos divertimos", "se diverti"], "\"A turma\" é singular: a turma se divertiu."],
+      ["Complete: \"Já ___ três horas da tarde.\"", ["são", "é", "era", "foi"], "Indicando horas, o verbo concorda com o número: são três horas (é uma hora)."],
+      ["Complete: \"Já ___ meio-dia e meia.\"", ["é", "são", "eram", "foram"], "Meio-dia é singular: é meio-dia e meia (meia = meia hora)."],
+      ["Complete: \"É ___ a entrada de animais.\"", ["proibida", "proibido", "proibidas", "proibidos"], "Com artigo antes do substantivo (A entrada), o adjetivo concorda: é proibida a entrada."],
+      ["Complete: \"É ___ entrada de animais.\" (sem artigo antes de \"entrada\")", ["proibido", "proibida", "proibidos", "proibidas"], "Sem artigo, a expressão fica invariável: é proibido entrada."],
+      ["Complete: \"Os cadernos custaram ___.\"", ["caro", "caros", "cara", "caras"], "Em \"custar caro\", \"caro\" é advérbio e não muda."],
+      ["Complete: \"As blusas estão ___.\"", ["caras", "caro", "cara", "caros"], "Aqui \"caro\" é adjetivo (qualidade das blusas) e concorda: blusas caras."],
+      ["Complete: \"___ dois dias para as férias.\" (verbo faltar)", ["Faltam", "Falta", "Faltou", "Faltará"], "O sujeito é \"dois dias\" (plural): faltam dois dias."],
+      ["Qual frase está correta na norma padrão?", ["Vendem-se casas.", "Vende-se casas.", "Vendem-se casa.", "Vende-se as casas."], "Na voz passiva com \"se\", o verbo concorda com o sujeito: casas são vendidas = vendem-se casas."],
+      ["Complete: \"Vossa Excelência ___ cansado?\" (falando com uma autoridade)", ["está", "estais", "estão", "estou"], "Com pronomes de tratamento (Vossa Excelência, Você), o verbo fica na 3ª pessoa: está."],
+      ["Complete: \"O Jaquinho e o Daniel ___ no lago do sítio.\"", ["nadaram", "nadou", "nadamos", "nadei"], "Sujeito composto (o Jaquinho e o Daniel) pede o verbo no plural: nadaram."]
+    ],
+    classes:[
+      ["Em \"O Daniel correu rapidamente\", a palavra \"rapidamente\" é…", ["advérbio de modo", "adjetivo", "substantivo", "verbo"], "Indica o modo como ele correu: advérbio de modo (palavras em -mente costumam ser)."],
+      ["Em \"O correr da água acalma\", a palavra \"correr\" é…", ["substantivo", "verbo", "advérbio", "adjetivo"], "Com o artigo \"o\" antes, o verbo vira nome da ação: é um substantivo (verbo substantivado)."],
+      ["Em \"Ela é a mais rápida da equipe\", a palavra \"mais\" é…", ["advérbio de intensidade", "conjunção", "substantivo", "pronome"], "\"Mais\" intensifica o adjetivo \"rápida\": advérbio de intensidade."],
+      ["Em \"Nós vimos o show\", a palavra \"Nós\" é…", ["pronome pessoal", "substantivo", "artigo", "adjetivo"], "\"Nós\" substitui o nome das pessoas que falam: pronome pessoal reto."],
+      ["Em \"Encontrei-o na escola\", a palavra \"o\" é…", ["pronome oblíquo", "artigo", "preposição", "substantivo"], "\"O\" está no lugar de uma pessoa (encontrei ele): pronome pessoal oblíquo."],
+      ["Em \"O violino é antigo\", a palavra \"O\" é…", ["artigo definido", "pronome", "preposição", "numeral"], "\"O\" vem antes do substantivo e o define: artigo definido."],
+      ["Em \"Ele foi o primeiro da fila\", a palavra \"primeiro\" é…", ["numeral ordinal", "numeral cardinal", "advérbio", "verbo"], "Indica ordem (1º): numeral ordinal."],
+      ["Em \"Vou ao sítio e volto amanhã\", a palavra \"e\" é…", ["conjunção", "preposição", "artigo", "verbo"], "\"E\" liga duas orações: conjunção."],
+      ["Em \"Estudei porque tinha prova\", a palavra \"porque\" é…", ["conjunção", "substantivo", "advérbio", "preposição"], "\"Porque\" liga as orações e explica a causa: conjunção."],
+      ["Em \"Ninguém faltou ao ensaio\", a palavra \"Ninguém\" é…", ["pronome indefinido", "substantivo", "advérbio", "artigo"], "Indica pessoa de forma vaga, não definida: pronome indefinido."],
+      ["Em \"Isto é meu\", a palavra \"Isto\" é…", ["pronome demonstrativo", "pronome possessivo", "artigo", "advérbio"], "\"Isto\" aponta para algo perto de quem fala: pronome demonstrativo."],
+      ["Em \"O livro que li é ótimo\", a palavra \"que\" é…", ["pronome relativo", "conjunção", "preposição", "advérbio"], "\"Que\" retoma \"o livro\" (o livro, o qual li): pronome relativo."],
+      ["Em \"Ufa! Terminei a prova\", a palavra \"Ufa\" é…", ["interjeição", "advérbio", "substantivo", "verbo"], "Expressa emoção (alívio): interjeição."],
+      ["Qual destas palavras é um substantivo abstrato?", ["saudade", "mesa", "violino", "cachorro"], "Saudade é um sentimento, não existe sozinho como objeto: substantivo abstrato."],
+      ["Qual destas palavras é um substantivo coletivo?", ["cardume", "peixe", "árvore", "aluno"], "Cardume é um conjunto de peixes: substantivo coletivo."],
+      ["Qual é o coletivo de \"abelhas\"?", ["enxame", "cardume", "alcateia", "rebanho"], "Enxame é o grupo de abelhas."],
+      ["Qual é o coletivo de \"lobos\"?", ["alcateia", "cardume", "enxame", "constelação"], "Alcateia é o grupo de lobos."],
+      ["Em \"Ele andava sem rumo\", a palavra \"sem\" é…", ["preposição", "conjunção", "advérbio", "artigo"], "\"Sem\" liga duas palavras (andava / rumo): preposição."],
+      ["Em \"O céu estava azul\", a palavra \"azul\" é…", ["adjetivo", "substantivo", "verbo", "advérbio"], "\"Azul\" dá uma característica ao céu: adjetivo."],
+      ["Em \"Talvez chova amanhã\", a palavra \"Talvez\" é…", ["advérbio de dúvida", "advérbio de tempo", "conjunção", "interjeição"], "\"Talvez\" mostra dúvida: advérbio de dúvida. (\"Amanhã\" é que é advérbio de tempo.)"],
+      ["Qual destas palavras é um verbo no infinitivo?", ["sorrir", "sorriso", "sorridente", "alegria"], "Sorrir termina em -IR e indica ação: verbo no infinitivo."],
+      ["Em \"Lá no sítio é tranquilo\", a palavra \"Lá\" é…", ["advérbio de lugar", "pronome", "artigo", "substantivo"], "\"Lá\" indica lugar: advérbio de lugar."]
+    ],
+    verbos:[
+      ["Pretérito perfeito de \"eu faço\":", ["eu fiz", "eu fazi", "eu fazei", "eu faci"], "Fazer é irregular: eu fiz, ele fez."],
+      ["Pretérito perfeito de \"eu digo\":", ["eu disse", "eu dizi", "eu dissi", "eu dizei"], "Dizer é irregular: eu disse."],
+      ["Pretérito perfeito de \"eu quero\":", ["eu quis", "eu queri", "eu quiz", "eu quisi"], "Querer é irregular: eu quis (com S)."],
+      ["Pretérito perfeito de \"ela sabe\":", ["ela soube", "ela sabeu", "ela sabiu", "ela sube"], "Saber é irregular: ela soube."],
+      ["Pretérito perfeito de \"eu posso\":", ["eu pude", "eu podi", "eu possi", "eu pôde"], "Poder: eu pude, ele pôde."],
+      ["Pretérito perfeito de \"ele cabe\":", ["ele coube", "ele cabeu", "ele cabiu", "ele caube"], "Caber é irregular: ele coube."],
+      ["Futuro do presente de \"eu faço\":", ["eu farei", "eu fazerei", "eu fazei", "eu farerei"], "Fazer no futuro: eu farei."],
+      ["Futuro do presente de \"eu digo\":", ["eu direi", "eu dizerei", "eu dizirei", "eu direrei"], "Dizer no futuro: eu direi."],
+      ["Futuro do pretérito de \"eu trago\":", ["eu traria", "eu trazeria", "eu trazia", "eu trouxeria"], "Trazer no futuro do pretérito: eu traria. (\"Trazia\" é pretérito imperfeito.)"],
+      ["Complete: \"Se eu ___ (ter) tempo, iria ao show.\"", ["tivesse", "tenhesse", "tesse", "tinha"], "Depois de \"se\", com \"iria\", usamos o subjuntivo: se eu tivesse."],
+      ["Complete: \"Quando eu ___ (pôr) o violino na caixa, te aviso.\"", ["puser", "pôr", "ponhar", "por"], "Futuro do subjuntivo de pôr: quando eu puser. \"Quando eu pôr\" é um erro comum."],
+      ["Complete: \"Se ele ___ (vir) amanhã, vamos ao sítio.\"", ["vier", "vir", "ver", "vim"], "Futuro do subjuntivo de VIR: se ele vier."],
+      ["Complete: \"Se você ___ (ver) o Daniel, mande um abraço.\"", ["vir", "ver", "vier", "veja"], "Futuro do subjuntivo de VER: se você vir. (De VIR seria \"vier\".)"],
+      ["Complete: \"Espero que você ___ (fazer) uma boa prova.\"", ["faça", "faz", "fazer", "fizer"], "Depois de \"espero que\", usamos o presente do subjuntivo: que você faça."],
+      ["Complete: \"É importante que nós ___ (estudar) todos os dias.\"", ["estudemos", "estudamos", "estudar", "estudaremos"], "\"É importante que\" pede o subjuntivo: que nós estudemos."],
+      ["Imperativo de \"estudar\" falando com \"você\":", ["estude", "estuda", "estudar", "estudou"], "Com \"você\", o imperativo usa a forma do subjuntivo: estude!"],
+      ["Complete: \"Não ___ barulho, o James está dormindo!\" (fazer, com \"você\")", ["faça", "faz", "fazer", "fez"], "Imperativo negativo: não faça."],
+      ["Em \"O violino foi afinado pelo professor\", a voz do verbo é…", ["passiva", "ativa", "reflexiva", "imperativa"], "O sujeito (o violino) recebe a ação: voz passiva (foi afinado por alguém)."],
+      ["Qual é o gerúndio de \"tocar\"?", ["tocando", "tocado", "tocar", "tocou"], "Gerúndio termina em -NDO: tocando."],
+      ["Qual é o particípio de \"escrever\"?", ["escrito", "escrevido", "escrevendo", "escreveu"], "Escrever tem particípio irregular: escrito."],
+      ["Qual é o particípio de \"abrir\"?", ["aberto", "abrido", "abrindo", "abriu"], "Abrir tem particípio irregular: aberto."],
+      ["Em \"Amanhã eu viajo para Juquiá\", o verbo no presente indica…", ["um fato futuro", "um fato passado", "um hábito antigo", "uma ordem"], "Com \"amanhã\", o presente indica algo que vai acontecer."],
+      ["Em \"Nós fomos ao sítio\", o verbo \"fomos\" é do infinitivo…", ["ir", "ser", "estar", "fomar"], "\"Fomos ao sítio\" = verbo ir. Em \"fomos felizes\" seria do verbo ser."]
+    ],
+    sentido:[
+      ["\"O vento cantava nas árvores.\" É…", ["personificação", "hipérbole", "comparação", "onomatopeia"], "Cantar é coisa de gente: dar ação humana ao vento é personificação."],
+      ["\"Ela é rápida como um raio.\" É…", ["comparação", "metáfora", "ironia", "eufemismo"], "Usa \"como\" para comparar: comparação."],
+      ["\"Ele é uma raposa nos negócios.\" É…", ["metáfora", "comparação", "onomatopeia", "hipérbole"], "Diz que ele É uma raposa (esperto), sem usar \"como\": metáfora."],
+      ["\"Estou morrendo de fome!\" É…", ["hipérbole", "eufemismo", "personificação", "onomatopeia"], "É um exagero para mostrar muita fome: hipérbole."],
+      ["\"Ele partiu desta para melhor\" (no lugar de \"ele morreu\"). É…", ["eufemismo", "hipérbole", "ironia", "comparação"], "Suaviza uma ideia triste: eufemismo."],
+      ["\"Au, au!\", latiu o cachorro. \"Au, au\" é…", ["onomatopeia", "metáfora", "ironia", "personificação"], "Palavra que imita um som: onomatopeia."],
+      ["\"Que dia lindo!\", disse ele, encharcado pela tempestade. É…", ["ironia", "eufemismo", "comparação", "metáfora"], "Diz o contrário do que pensa: ironia."],
+      ["\"Bebi um copo de água.\" Usar \"copo\" no lugar da água que estava nele é…", ["metonímia", "metáfora", "hipérbole", "onomatopeia"], "Troca o conteúdo pelo recipiente: metonímia."],
+      ["\"Li Machado de Assis nas férias\" (li os livros dele). É…", ["metonímia", "personificação", "eufemismo", "ironia"], "Troca a obra pelo autor: metonímia."],
+      ["\"Ele chorou rios de lágrimas.\" É…", ["hipérbole", "comparação", "eufemismo", "metonímia"], "Exagero: ninguém chora rios. Hipérbole."],
+      ["\"Estar com a pulga atrás da orelha\" quer dizer…", ["estar desconfiado", "estar com coceira", "estar com sono", "estar alegre"], "Expressão popular para desconfiança."],
+      ["\"Pagar o pato\" quer dizer…", ["levar a culpa por algo que não fez", "comprar um pato", "pagar a conta do almoço", "ganhar um presente"], "Expressão popular: ser culpado ou castigado no lugar de outro."],
+      ["\"Dar com a língua nos dentes\" quer dizer…", ["contar um segredo", "morder a língua", "ficar calado", "escovar os dentes"], "Expressão popular: revelar o que devia ficar em segredo."],
+      ["\"Engolir sapos\" quer dizer…", ["aguentar coisas desagradáveis sem reclamar", "comer algo estranho", "ficar doente", "falar demais"], "Expressão popular: suportar situações chatas calado."],
+      ["\"Ter memória de elefante\" quer dizer…", ["lembrar de tudo", "ser esquecido", "ser muito grande", "comer muito"], "Expressão popular para quem tem ótima memória."],
+      ["\"Fazer tempestade em copo d'água\" quer dizer…", ["exagerar um problema pequeno", "derramar água", "não ligar para nada", "resolver tudo rápido"], "Expressão popular para exagero diante de algo simples."],
+      ["\"Ele é um poço de paciência.\" É…", ["metáfora", "comparação", "onomatopeia", "ironia"], "Diz que ele É um poço (tem muita paciência), sem \"como\": metáfora."],
+      ["Em \"Nasce o sol e morre a tarde\", as palavras \"nasce\" e \"morre\" formam…", ["antítese (ideias opostas)", "onomatopeia", "eufemismo", "comparação"], "Nascer x morrer são ideias opostas lado a lado: antítese."],
+      ["\"O Daniel é uma figura!\" quer dizer que o Daniel…", ["é engraçado e diferente", "é um desenho", "é muito sério", "é famoso na TV"], "Expressão popular para alguém divertido e original."],
+      ["\"As estrelas piscavam para nós.\" É…", ["personificação", "hipérbole", "eufemismo", "metonímia"], "Piscar para alguém é ação humana: personificação."],
+      ["\"Falei mil vezes para você estudar!\" É…", ["hipérbole", "metáfora", "comparação", "onomatopeia"], "Mil vezes é exagero: hipérbole."]
+    ],
+    pontuacao:[
+      ["Qual frase está pontuada corretamente?", ["Mamãe, o James acordou!", "Mamãe o James, acordou!", "Mamãe o James acordou,", "Mamãe, o James, acordou!"], "\"Mamãe\" é vocativo (quem é chamado) e vem separado por vírgula. Não se separa o sujeito (o James) do verbo."],
+      ["Qual frase está pontuada corretamente?", ["O Daniel, que adora o sítio, chegou cedo.", "O Daniel que adora o sítio, chegou cedo.", "O Daniel, que adora o sítio chegou cedo.", "O Daniel que, adora o sítio chegou cedo."], "A informação extra \"que adora o sítio\" fica entre duas vírgulas."],
+      ["Qual frase tem uma vírgula ERRADA?", ["Os alunos, estudaram muito.", "Ontem, choveu.", "Pedro, venha cá.", "Comprei pão, leite e café."], "Não se separa o sujeito (os alunos) do verbo (estudaram) com vírgula."],
+      ["Qual frase tem uma vírgula ERRADA?", ["A professora, explicou a matéria.", "Sim, eu vou.", "Em Juquiá, o sítio é enorme.", "Ele estudou, mas esqueceu."], "Não se separa o sujeito (a professora) do verbo (explicou)."],
+      ["Em \"Estudei muito, mas não passei\", a vírgula vem antes de…", ["uma palavra que indica oposição", "um vocativo", "um aposto", "uma lista"], "Antes de \"mas\" (oposição) usamos vírgula."],
+      ["Para que servem os dois-pontos em: Ele disse: — Vou viajar.", ["Para anunciar a fala de alguém", "Para encerrar a frase", "Para indicar pergunta", "Para separar números"], "Os dois-pontos anunciam a fala que vem depois."],
+      ["No diálogo, o travessão (—) serve para…", ["indicar a fala de um personagem", "fazer uma pergunta", "separar números", "terminar o texto"], "O travessão marca quando um personagem começa a falar."],
+      ["Qual frase usa o ponto de exclamação corretamente?", ["Que show incrível!", "Que horas são!", "Qual é o seu nome!", "Onde fica a escola!"], "Exclamação mostra emoção. As outras são perguntas e pedem ponto de interrogação."],
+      ["Em \"Comprei: arco, breu e cordas\", os dois-pontos anunciam…", ["uma enumeração (lista)", "uma pergunta", "uma fala", "uma conclusão"], "Depois dos dois-pontos vem a lista do que foi comprado."],
+      ["Qual frase está pontuada corretamente?", ["Eu estudo de manhã; ele, à tarde.", "Eu estudo de manhã ele à tarde.", "Eu, estudo de manhã; ele à tarde.", "Eu estudo; de manhã ele, à tarde."], "O ponto e vírgula separa as duas partes, e a vírgula em \"ele, à tarde\" marca o verbo que foi omitido (ele estuda à tarde)."],
+      ["Em \"Ele, à tarde, toca violino\", as vírgulas isolam…", ["uma expressão de tempo no meio da frase", "um vocativo", "uma fala", "uma lista"], "\"À tarde\" é expressão de tempo deslocada, por isso vem entre vírgulas."],
+      ["O que muda entre \"Não, quero sair.\" e \"Não quero sair.\"?", ["O sentido: na 1ª a pessoa quer sair; na 2ª não quer", "Nada, as duas dizem o mesmo", "A 1ª é uma pergunta", "A 2ª é uma ordem"], "A vírgula muda tudo: \"Não, quero sair\" responde \"não\" a algo e diz que quer sair."],
+      ["Em \"O Brasil, meu país, é enorme\", o trecho \"meu país\" é…", ["um aposto", "um vocativo", "o sujeito", "o verbo"], "Aposto explica um termo anterior e fica entre vírgulas."],
+      ["Em \"Professora, posso sair?\", a palavra \"Professora\" é…", ["vocativo", "aposto", "sujeito", "predicado"], "Vocativo é quem está sendo chamado."],
+      ["Qual frase NÃO precisa de nenhuma vírgula?", ["O gato dormiu no sofá.", "Joana venha cá!", "Comprei maçã banana e uva.", "Sim eu vou."], "As outras precisam de vírgula: \"Joana, venha cá!\", \"maçã, banana e uva\", \"Sim, eu vou.\""],
+      ["Em \"Ele estudou muito; portanto, passou\", o ponto e vírgula…", ["separa duas partes com uma pausa maior que a vírgula", "indica uma pergunta", "anuncia uma fala", "termina o texto"], "O ponto e vírgula faz uma pausa maior que a vírgula e menor que o ponto."],
+      ["As reticências em \"Bom… acho que sim\" indicam…", ["hesitação, dúvida", "certeza", "ordem", "pergunta"], "Reticências mostram pensamento interrompido ou dúvida."],
+      ["Qual frase está pontuada corretamente?", ["Infelizmente, o show foi cancelado.", "Infelizmente o show, foi cancelado.", "Infelizmente o show foi, cancelado.", "Infelizmente, o show, foi cancelado."], "A palavra no início (\"Infelizmente\") se separa com vírgula; o sujeito não se separa do verbo."],
+      ["Os parênteses em \"O Daniel (meu primo) chegou\" servem para…", ["dar uma informação extra", "fazer uma pergunta", "marcar a fala", "indicar ordem"], "Parênteses guardam uma explicação a mais."],
+      ["Qual frase está pontuada corretamente?", ["Quando o ensaio acabou, todos aplaudiram.", "Quando o ensaio, acabou todos aplaudiram.", "Quando, o ensaio acabou todos aplaudiram.", "Quando o ensaio acabou todos, aplaudiram."], "A parte que indica tempo (\"Quando o ensaio acabou\") vem antes e se separa com vírgula."],
+      ["Em \"Sim, eu fiz a lição\", a vírgula vem depois de…", ["uma palavra de resposta", "um sujeito", "um verbo", "uma lista"], "\"Sim\" e \"não\" no começo da resposta são separados por vírgula."]
+    ],
+    interpretacao:[
+      ["Qual é o assunto principal do texto?", ["A importância da Mata Atlântica do Vale do Ribeira", "A história da cidade de Juquiá", "Como construir represas", "Os animais da Amazônia"], "O texto inteiro fala da mata do Vale do Ribeira e de por que ela é importante.", "j8"],
+      ["Segundo o texto, quanto resta da Mata Atlântica original?", ["Pouco mais de 12%", "Metade", "Quase toda", "Nada"], "\"Hoje restam pouco mais de 12% da área original.\"", "j8"],
+      ["Como as raízes das árvores ajudam a água?", ["Seguram o solo e ajudam a chuva a se infiltrar devagar", "Bebem toda a água da chuva", "Impedem a chuva de cair", "Levam a água direto para o mar"], "O texto diz que as raízes seguram o solo e ajudam a água a se infiltrar devagar.", "j8"],
+      ["O que acontece quando a floresta é derrubada?", ["A chuva arrasta o solo e as enchentes ficam mais fortes", "Os rios ficam mais limpos", "Nascem mais árvores", "A chuva para de cair"], "\"A chuva arrasta o solo para os rios e as enchentes ficam mais fortes.\"", "j8"],
+      ["No texto, \"Mesmo assim\" introduz uma ideia de…", ["contraste: mesmo pequena, a mata ainda abriga muitas espécies", "causa", "tempo", "conclusão final"], "\"Mesmo assim\" mostra uma oposição: restou pouco, mas a mata ainda é muito rica.", "j8"],
+      ["A frase final defende que preservar a mata…", ["também garante água para as cidades", "serve só para proteger os bichos", "é tarefa só dos cientistas", "não tem importância"], "\"Preservar a mata não é só cuidar dos bichos: é garantir água para as cidades.\"", "j8"],
+      ["Qual era o problema do Jaquinho no começo da história?", ["Errava sempre o mesmo trecho da música", "Tinha esquecido o violino", "Não sabia ler partitura", "O Daniel escondeu o arco"], "\"Ainda tropeçava no mesmo trecho da música.\"", "j9"],
+      ["Qual estratégia o Jaquinho usou?", ["Treinar só o trecho difícil, devagar, acelerando aos poucos", "Tocar a música inteira mais rápido", "Pular o trecho difícil", "Pedir para o Daniel tocar"], "Ele separou os quatro compassos difíceis e tocou devagar, aumentando a velocidade aos poucos.", "j9"],
+      ["O que o Daniel achava do jeito de treinar do primo?", ["Que era chato e seria melhor tocar a música toda", "Que era o melhor jeito de treinar", "Que também queria aprender assim", "Que o primo devia parar de tocar"], "O Daniel achou \"um tédio\" e disse: \"Toca logo a música toda\".", "j9"],
+      ["\"Os dedos foram sozinhos\" significa que…", ["ele tocou o trecho com naturalidade, sem travar", "os dedos se machucaram", "ele parou de tocar", "outra pessoa tocou por ele"], "É uma forma figurada de dizer que o trecho saiu fácil, de tanto treinar.", "j9"],
+      ["Por que o elogio do papai tem um valor especial?", ["Porque o papai raramente elogia sem motivo", "Porque o papai elogia tudo", "Porque o papai não foi à apresentação", "Porque o papai também toca violino"], "O texto diz que o papai \"raramente elogiava sem motivo\".", "j9"],
+      ["Qual é a ideia principal da história?", ["Treinar com estratégia resolve dificuldades", "Sorte é o mais importante", "Música não precisa de treino", "Treinar é sempre chato"], "O papai resume: \"Isso não foi sorte. Foi método.\"", "j9"],
+      ["Que tipo de texto é esse?", ["Texto de opinião (argumentativo)", "Receita", "Notícia de esporte", "Poema"], "O autor apresenta argumentos e dá a sua opinião (\"Na minha opinião…\").", "j10"],
+      ["Qual argumento é A FAVOR da proibição do celular?", ["Sem a tela, os alunos prestam mais atenção", "O celular tem calculadora", "O celular ajuda na pesquisa", "O celular tem dicionário"], "Os defensores dizem que, sem a tela, os alunos prestam mais atenção.", "j10"],
+      ["Qual argumento é CONTRA a proibição?", ["O celular pode ser uma ferramenta de estudo", "Os alunos conversam mais entre si", "Há menos distrações", "Há menos comparações nas redes"], "Os críticos lembram que o celular também serve para estudar.", "j10"],
+      ["Qual é a opinião do autor?", ["Proibir na maior parte do tempo, mas liberar em atividades planejadas", "Proibir totalmente, sempre", "Liberar o celular o tempo todo", "O autor não dá opinião"], "\"A proibição faz sentido na maior parte do tempo, mas o professor deveria poder liberar…\"", "j10"],
+      ["Em \"Já os críticos lembram…\", a palavra \"Já\" indica…", ["a passagem para uma ideia contrária", "tempo passado", "pressa", "uma conclusão"], "Aqui \"já\" apresenta o outro lado da discussão.", "j10"],
+      ["\"O problema não é a ferramenta, e sim o uso sem objetivo\" quer dizer que…", ["o que importa é como o celular é usado", "o celular é sempre ruim", "o celular é sempre bom", "ferramentas devem ser proibidas"], "O autor defende que o problema está no uso, não no aparelho.", "j10"]
+    ]
+} };
 function bancoPT(k){
   if(BANCO_PT[k]) return BANCO_PT[k];
   const lista=PT[k].map(([s,q,ops,ex,tx],i)=>({skill:s,qid:k+'-pt-'+i,q,ops,ex,tx}));
   for(const [s,l] of Object.entries(PTX[k]||{})) l.forEach(([q,ops,ex,tx],j)=>lista.push({skill:s,qid:k+'-ptx-'+s+'-'+j,q,ops,ex,tx}));
+  for(const [s,l] of Object.entries(PTX3[k]||{})) l.forEach(([q,ops,ex,tx],j)=>lista.push({skill:s,qid:k+'-ptx3-'+s+'-'+j,q,ops,ex,tx}));
   const map={}; lista.forEach(o=>map[o.qid]=o);
   return BANCO_PT[k]={lista,map};
 }
@@ -922,7 +1232,7 @@ const limPressa=q=>q.texto?7:4;   // segundos mínimos antes de responder sem co
 /* ================= salvar também o que foi respondido no meio ================= */
 function respondidas(r){ return r ? r.qs.map((q,i)=>({q,i})).filter(o=>r.resp[o.i]!=null) : []; }
 function sessaoDoRun(parcial){
-  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; if(q.gemea) o.g=1; if(q.etapa) o.e=q.etapa; if(q.revisao) o.rv=1; return o; });
+  const ts=Date.now(), its=respondidas(run).map(({q,i})=>{ const o={skill:q.skill,qid:q.qid,ok:run.resp[i]===q.a}; if(run.tq[i]!=null) o.t=run.tq[i]; if(run.rap[i]) o.r=1; if(q.nv) o.nv=q.nv; if(q.gemea) o.g=1; if(q.etapa) o.e=q.etapa; if(q.revisao) o.rv=1; if(q.fato) o.f=q.fato; if(q.desafio) o.d=1; return o; });
   const s={id:run.id, kid:run.kid, tipo:run.tipo, date:today(), ts, serie:serieDe(run.kid), dur:Math.round((ts-run.t0)/1000), items:its, score:its.filter(i=>i.ok).length};
   if(parcial) s.parcial=true;
   return s;
@@ -1050,10 +1360,10 @@ function marcarSom(){ const b=$('#som'); if(b){ b.textContent=somOn?'Som ligado'
 /* ---- Onde os treinos ficam salvos: Google Planilha via Apps Script (mesmo modelo do sistema da floricultura) ---- */
 const API_URL = 'https://script.google.com/macros/s/AKfycbx0X0ynsWZYjWvS_ehZt5LKk3_L3F4VGUgijW3nv7tsmGpG0XLRUCziiksPBbvfsinZ7Q/exec';   // termina em /exec — ver passo a passo no CLAUDE.md
 const TOKEN = 'mb-db211c7bc8334f33975a4b5e';
-let sessions=[], cfg={maiaSerie:4}, kid='jaquinho', view='treino', run=null, storeMode='local', estudarFoco=null;
+let recados=[], sessions=[], cfg={maiaSerie:4}, kid='jaquinho', view='treino', run=null, storeMode='local', estudarFoco=null;
 const LS='missao-bolsa-v1', LSQ='missao-bolsa-fila';
-function loadLocal(){ try{ const j=JSON.parse(localStorage.getItem(LS)||'{}'); sessions=j.sessions||[]; cfg=Object.assign(cfg,j.cfg||{}); }catch(e){} }
-function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify({sessions,cfg})); }catch(e){} }
+function loadLocal(){ try{ const j=JSON.parse(localStorage.getItem(LS)||'{}'); sessions=j.sessions||[]; recados=j.recados||[]; cfg=Object.assign(cfg,j.cfg||{}); }catch(e){} }
+function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify({sessions,recados,cfg})); }catch(e){} }
 function fila(){ try{ return JSON.parse(localStorage.getItem(LSQ)||'[]'); }catch(e){ return []; } }
 function setFila(q){ try{ localStorage.setItem(LSQ, JSON.stringify(q)); }catch(e){} }
 try{ const k=localStorage.getItem(LS+'-kid'); if(k&&KIDS[k]) kid=k; }catch(e){}
@@ -1069,6 +1379,9 @@ async function initDb(){
     const porId = new Map(r.sessoes.map(x=>[x.id,x]));
     fila().filter(x=>x.acao==='salvarSessao').forEach(x=>porId.set(x.sessao.id,x.sessao));   // o que está na fila é mais novo
     sessions = [...porId.values()];
+    const recId = new Map((r.recados||[]).map(x=>[x.id,x]));
+    fila().filter(x=>x.acao==='salvarRecado').forEach(x=>recId.set(x.recado.id,x.recado));
+    recados = [...recId.values()];
     if(run && run.resp.some(x=>x!=null)) sessions = sessions.filter(x=>x.id!==run.id).concat(sessoesRunAtual());
     if(r.config && r.config.maiaSerie) cfg.maiaSerie = Number(r.config.maiaSerie);
     if(r.config && r.config.papaiHash) cfg.papaiHash = String(r.config.papaiHash);
@@ -1101,6 +1414,60 @@ function upsertSession(s){
   const i=sessions.findIndex(x=>x.id===s.id); if(i>=0) sessions[i]=s; else sessions.push(s); saveLocal();
   const q=fila().filter(x=>!(x.acao==='salvarSessao' && x.sessao.id===s.id)); q.push({fid:novoFid(),acao:'salvarSessao',sessao:s}); setFila(q);
 }
+/* v18 — Recados: a criança escreve para o papai e o Tutor ("quero mais deste assunto", "explique melhor"…). Ficam na aba Recados da planilha. */
+const TIPOS_RECADO=['Quero mais questões deste assunto','Quero mais informações sobre isso','Explique melhor o porquê','Achei esta questão estranha ou errada','Outro'];
+function salvarRecado(rec){ const i=recados.findIndex(x=>x.id===rec.id); if(i>=0) recados[i]=rec; else recados.push(rec); saveLocal();
+  const q=fila().filter(x=>!(x.acao==='salvarRecado' && x.recado.id===rec.id)); q.push({fid:novoFid(),acao:'salvarRecado',recado:rec}); setFila(q); enviarFila(); }
+function abrirRecado(ctx){
+  document.getElementById('recado-modal')?.remove();
+  const nomeSk=ctx.assunto && SKILLS[kid][ctx.assunto] ? SKILLS[kid][ctx.assunto].nome : '';
+  const box=document.createElement('div'); box.id='recado-modal'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-label','Mandar recado');
+  box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50';
+  box.innerHTML=`<div class="card" style="max-width:560px;width:100%;max-height:90vh;overflow:auto;gap:12px">
+    <h3>Recado para o papai e o Tutor</h3>
+    ${nomeSk?`<p class="muted" style="margin:0">Assunto: <strong>${esc(nomeSk)}</strong></p>`:''}${ctx.questao?`<p class="muted" style="margin:0;font-size:14px">Questão: ${esc(ctx.questao)}</p>`:''}
+    <div class="row" style="gap:8px">${TIPOS_RECADO.map((t,i)=>`<button type="button" class="btn ghost" data-tipo="${i}" aria-pressed="false" style="font-size:14px;padding:8px 12px">${esc(t)}</button>`).join('')}</div>
+    <textarea id="recado-texto" maxlength="500" rows="4" placeholder="Escreva aqui o que você quer (opcional se já escolheu um botão acima)" style="width:100%;font:500 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></textarea>
+    <p class="note" id="recado-msg"></p>
+    <div class="row"><button class="btn" id="recado-enviar">Enviar recado</button><button class="btn ghost" id="recado-cancelar">Cancelar</button></div></div>`;
+  document.body.appendChild(box);
+  let tipo=null;
+  box.querySelectorAll('[data-tipo]').forEach(b=>b.addEventListener('click',()=>{ tipo=TIPOS_RECADO[+b.dataset.tipo]; box.querySelectorAll('[data-tipo]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); box.querySelectorAll('[data-tipo]').forEach(x=>x.classList.toggle('ghost',x!==b)); }));
+  box.querySelector('#recado-cancelar').addEventListener('click',()=>box.remove());
+  box.addEventListener('click',e=>{ if(e.target===box) box.remove(); });
+  box.querySelector('#recado-enviar').addEventListener('click',()=>{
+    const texto=box.querySelector('#recado-texto').value.trim();
+    if(!tipo && !texto){ box.querySelector('#recado-msg').textContent='Escolha um botão ou escreva alguma coisa.'; return; }
+    const ts=Date.now(); salvarRecado({id:kid+'-r-'+ts, kid, ts, date:today(), assunto:ctx.assunto||'', tipo:tipo||'Outro', texto, questao:ctx.questao||'', status:'novo', resposta:''});
+    box.remove(); avisoRapido('Recado enviado! O papai vai ver no Painel.'); if(!run) render();
+  });
+  box.querySelector('#recado-texto').focus();
+}
+function avisoRapido(t){ const d=document.createElement('div'); d.className='pressa'; d.setAttribute('role','status'); d.textContent=t; d.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.2)'; document.body.appendChild(d); setTimeout(()=>d.remove(),3000); }
+const botaoRecado=(attrs,txt)=>`<button type="button" class="btn ghost" ${attrs} style="font-size:14px;padding:8px 12px">${txt||'Mandar recado'}</button>`;
+function cardRecadosCrianca(){
+  const meus=recados.filter(r=>r.kid===kid).sort((a,b)=>b.ts-a.ts).slice(0,5);
+  return `<section class="card"><div class="row" style="justify-content:space-between"><h3>Meus recados</h3>${botaoRecado('data-recado="livre"','Escrever recado')}</div>
+    <p class="muted" style="margin:0">Quer mais questões de um assunto, mais explicação ou achou alguma questão estranha? Mande um recado: o papai lê no Painel e o Tutor usa para melhorar o app.</p>
+    ${meus.length?`<ul class="focuslist">${meus.map(r=>`<li style="flex-direction:column;align-items:flex-start;gap:4px"><span><strong>${esc(r.tipo)}</strong>${r.assunto&&SKILLS[kid][r.assunto]?' · '+esc(SKILLS[kid][r.assunto].nome):''} <span class="muted" style="font-size:13px">${ddmm(r.date)}</span></span>${r.texto?`<span>${esc(r.texto)}</span>`:''}<span class="muted" style="font-size:14px">${r.resposta?`<strong>Resposta do papai:</strong> ${esc(r.resposta)}`:r.status==='visto'?'O papai já viu.':'O papai ainda não viu.'}</span></li>`).join('')}</ul>`:''}</section>`;
+}
+function cardRecadosPai(){
+  const lista=[...recados].sort((a,b)=>(a.status==='novo'?0:1)-(b.status==='novo'?0:1)||b.ts-a.ts).slice(0,30), novos=recados.filter(r=>r.status==='novo').length;
+  return `<section class="card"><h3>Recados das crianças${novos?` <span class="pill">${novos} ${novos===1?'novo':'novos'}</span>`:''}</h3>
+    ${lista.length?lista.map(r=>`<div class="feedback ${r.status==='novo'?'no':'ok'}" style="gap:6px"><span class="muted" style="font-size:13px">${esc(KIDS[r.kid]?.nome||r.kid)} · ${ddmm(r.date)}${r.assunto&&SKILLS[r.kid]?.[r.assunto]?' · '+esc(SKILLS[r.kid][r.assunto].nome):''} · ${r.status==='novo'?'novo':r.status==='visto'?'visto':'respondido'}</span>
+      <b style="font-size:16px">${esc(r.tipo)}</b>${r.texto?`<span>${esc(r.texto)}</span>`:''}${r.questao?`<span class="muted" style="font-size:14px">Questão: ${esc(r.questao)}</span>`:''}
+      <div class="row" style="gap:8px;align-items:flex-end"><textarea data-resp-texto="${esc(r.id)}" rows="2" maxlength="500" placeholder="Responder (a criança vê na tela inicial)" style="flex:1 1 240px;font:500 15px var(--font-body);padding:8px 10px;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)">${esc(r.resposta||'')}</textarea>
+      <button class="btn ghost" data-resp-enviar="${esc(r.id)}" style="font-size:14px;padding:8px 12px">Responder</button>${r.status==='novo'?`<button class="btn ghost" data-resp-visto="${esc(r.id)}" style="font-size:14px;padding:8px 12px">Marcar como visto</button>`:''}</div></div>`).join('')
+      :'<p class="muted">Nenhum recado ainda. As crianças mandam pelo botão "Mandar recado" nas questões, no Para estudar e na tela inicial.</p>'}</section>`;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-recado],[data-resp-enviar],[data-resp-visto]'); if(!b) return;
+  if(b.dataset.recado){ const t=b.dataset.recado; if(t==='q' && run){ const q=run.qs[run.i]; abrirRecado({assunto:q.skill, questao:q.q}); } else abrirRecado({assunto:t==='livre'?'':t, questao:''}); return; }
+  const id=b.dataset.respEnviar||b.dataset.respVisto, r=recados.find(x=>x.id===id); if(!r) return;
+  if(b.dataset.respEnviar){ const tx=document.querySelector(`[data-resp-texto="${CSS.escape(id)}"]`)?.value.trim()||''; salvarRecado({...r, resposta:tx, status:tx?'respondido':'visto'}); }
+  else salvarRecado({...r, status:'visto'});
+  render();
+});
 function sessoesRunAtual(){ return run && !run.fim ? [sessaoDoRun(true)] : []; }
 async function saveSession(s){ upsertSession(s); await enviarFila(); }
 async function saveCfg(extra){ saveLocal(); const q=fila(); q.push({fid:novoFid(),acao:'salvarConfig',config:Object.assign({maiaSerie:cfg.maiaSerie},extra||{})}); setFila(q); await enviarFila(); }
@@ -1176,10 +1543,29 @@ function devidos(k){
   return Object.values(st).filter(x=>diasEntre(x.last,hoje)>=(x.nivel===0?1:3)).sort((a,b)=>a.last<b.last?-1:1);
 }
 function questaoPT(k,o,extra){ const sh=shuffle(o.ops); return {skill:o.skill,qid:o.qid,q:o.q,texto:o.tx?TX[o.tx]:null,options:sh,a:sh.indexOf(o.ops[0]),ex:o.ex,...extra}; }
-function questaoMat(k,sk,extra){ const nv=(k==='maia'&&DEGRAUS[sk])?degrauDe(sk):undefined; const g=GEN[k][sk](serieDe(k),nv); return {skill:sk,qid:sk+'-gen',q:g.q,options:g.options,a:g.a,ex:g.ex,...(nv?{nv}:{}),...extra}; }
+/* v18 — Nível desafio (Jaquinho): assunto com 90% ou mais nas últimas 12 respostas (mínimo 12) ganha questões mais difíceis, no estilo das provas de bolsa, em 7 de cada 10 questões. Vale também no simulado. */
+const ehDominado=(k,sk)=>{ const v=maestria(k)[sk]; return !!v && v.n>=12 && v.wn>0 && v.c/v.wn>=0.9; };
+const emDesafio=sk=>!!DESAFIO[sk] && ehDominado('jaquinho',sk);
+function questaoMat(k,sk,extra){ const nv=(k==='maia'&&DEGRAUS[sk])?degrauDe(sk):undefined; const dsf=k==='jaquinho' && emDesafio(sk) && Math.random()<.7; const g=dsf?DESAFIO[sk]():GEN[k][sk](serieDe(k),nv); return {skill:sk,qid:sk+'-gen',q:g.q,options:g.options,a:g.a,ex:g.ex,...(g.fato?{fato:g.fato}:{}),...(dsf?{desafio:true}:{}),...(nv?{nv}:{}),...extra}; }
 /* Quando a criança viu cada questão de Português pela última vez (-1 = nunca viu). */
 function ultimaVez(k){ const m={}; itemsDe(k).forEach((i,n)=>m[i.qid]=n); return q=>q in m?m[q]:-1; }
 function escolherPT(k,banco,uv){ if(!banco.length) return null; const nunca=banco.filter(o=>uv(o.qid)<0); if(nunca.length) return pick(nunca); return pick([...banco].sort((a,b)=>uv(a.qid)-uv(b.qid)).slice(0,3)); }
+const TABS_MAYA=['tabuada6','tabuada7','tabuada8','tabuada9'];
+function dominadosMaya(){ return Object.keys(SKILLS.maia).filter(s=>!/^tabuada/.test(s) && ehDominado('maia',s)); }
+/* Grade da tabuada (Painel): cada fato 6×2…9×10 com as últimas respostas. */
+function gradeTabuada(){
+  const hist={}; itemsDe('maia').filter(i=>i.f).forEach(i=>(hist[i.f]=hist[i.f]||[]).push(i.ok));
+  const cel=(n,m)=>{ const h=(hist[n+'x'+m]||[]).slice(-3); const cor=!h.length?'var(--line)':!h[h.length-1]?'var(--bad)':h.filter(Boolean).length>=2?'var(--good)':'var(--gold)';
+    return `<td title="${h.length?h.map(x=>x?'acertou':'errou').join(', '):'ainda não apareceu'}" style="padding:4px 2px;text-align:center;border-radius:6px;background:color-mix(in srgb,${cor} 35%,var(--surface));font-size:13px;white-space:nowrap">${n}×${m}<br>${h.map(x=>x?'✓':'✗').join('')||'·'}</td>`; };
+  return `<div style="overflow-x:auto"><table style="border-collapse:separate;border-spacing:3px;width:100%;min-width:520px">${[6,7,8,9].map(n=>`<tr>${[2,3,4,5,6,7,8,9,10].map(m=>cel(n,m)).join('')}</tr>`).join('')}</table></div><p class="note">Cada quadradinho mostra as 3 últimas vezes que o fato apareceu (✓ acertou, ✗ errou). Verde: 2 ou mais acertos e o último certo. Amarelo: último certo, mas ainda oscila. Vermelho: errou da última vez. Cinza: ainda não apareceu.</p>`;
+}
+/* Texto das regras do treino (tela inicial e Painel): Maya = tabuada + dominados fora; Jaquinho = nível desafio. */
+function textoRegrasTreino(k){
+  if(k==='maia'){ const dom=dominadosMaya(), ptTodo=Object.keys(SKILLS.maia).filter(s=>!SKILLS.maia[s].mat).every(s=>dom.includes(s));
+    return `<p><strong>Foco na tabuada do 6 ao 9:</strong> pelo menos 3 questões de tabuada em cada treino.</p>${dom.length?`<p><strong>Fora do treino diário</strong> (já dominados: 90% ou mais nas últimas 12 respostas; continuam no simulado e na prática): ${dom.map(s=>SKILLS.maia[s].nome).join(', ')}.${ptTodo?' Como todo o Português está dominado, o treino traz só 2 questões de interpretação para manter, e o resto é Matemática.':''}</p>`:''}`; }
+  const ds=Object.keys(DESAFIO).filter(emDesafio);
+  return `<p><strong>Nível desafio:</strong> assunto com 90% ou mais nas últimas 12 respostas ganha questões mais difíceis, no estilo das provas de bolsa (7 de cada 10 questões do assunto, também no simulado).${ds.length?` Em desafio agora: ${ds.map(s=>SKILLS.jaquinho[s].nome).join(', ')}.`:' Nenhum assunto em desafio ainda.'}</p>`;
+}
 function montarTreino(k,tipo='treino'){
   const nMat = tipo==='simulado' ? (k==='jaquinho'?15:10) : 5, nPt=nMat;
   const m=maestria(k), skills=Object.keys(SKILLS[k]);
@@ -1202,9 +1588,20 @@ function montarTreino(k,tipo='treino'){
   const peso=sk=>{ if(tipo==='simulado') return 1; const s=m[sk]; return s.n<3 ? 1 : Math.pow(1-s.m,1.5)+0.12; };
   const lim = tipo==='simulado' ? 3 : 2;
   const sortear=pool=>{ const tot=pool.reduce((a,s)=>a+peso(s),0); let r=Math.random()*tot; for(const s of pool){ r-=peso(s); if(r<=0) return s; } return pool[pool.length-1]; };
-  const mats=skills.filter(s=>SKILLS[k][s].mat), pts=skills.filter(s=>!SKILLS[k][s].mat);
+  let mats=skills.filter(s=>SKILLS[k][s].mat), pts=skills.filter(s=>!SKILLS[k][s].mat);
+  if(tipo==='simulado') mats=mats.filter(s=>!/^tabuada/.test(s));   // tabuada é treino; o simulado mede o formato da prova
+  /* v18 — Maya: assuntos dominados (90% ou mais nas últimas 12) saem do treino diário (continuam no simulado e na prática).
+     Se todo o Português estiver dominado, ficam 2 de interpretação (manutenção) e o resto vira Matemática. */
+  if(k==='maia' && tipo==='treino'){
+    const dom=dominadosMaya(); mats=mats.filter(s=>!dom.includes(s)); if(!mats.length) mats=skills.filter(s=>/^tabuada/.test(s));
+    const ptsLivres=pts.filter(s=>!dom.includes(s));
+    if(ptsLivres.length) pts=ptsLivres; else { pts=['interpretacao']; const ex=Math.max(0,fPt-2); fPt-=ex; fMat+=ex; }
+  }
   const escolhidas=[];
   for(const t of [...Array(fMat).fill('mat'),...Array(fPt).fill('pt')]){ let pool=(t==='mat'?mats:pts).filter(s=>(cont[s]||0)<lim); if(!pool.length) pool=t==='mat'?mats:pts; const sk=sortear(pool); cont[sk]=(cont[sk]||0)+1; escolhidas.push(sk); }
+  /* v18 — Maya: pelo menos 3 questões de tabuada (6 a 9) por treino, priorizando a tabuada mais fraca. */
+  if(k==='maia' && tipo==='treino'){ const tabs=['tabuada6','tabuada7','tabuada8','tabuada9'].sort((a,b)=>peso(b)-peso(a)); let nt=escolhidas.filter(s=>/^tabuada/.test(s)).length, t=0;
+    for(let i=0;i<escolhidas.length && nt<3;i++){ if(SKILLS[k][escolhidas[i]].mat && !/^tabuada/.test(escolhidas[i])){ escolhidas[i]=tabs[t++%tabs.length]; nt++; } } }
   /* Maya com Português acima de 90%: pelo menos 2 das 5 de Português são de interpretação (textos maiores, como na prova). */
   if(k==='maia' && tipo==='treino' && (acerto(k,false)??0)>=90){ let ni=escolhidas.filter(s=>s==='interpretacao').length; for(let i=0;i<escolhidas.length && ni<2;i++){ if(!SKILLS[k][escolhidas[i]].mat && escolhidas[i]!=='interpretacao'){ escolhidas[i]='interpretacao'; ni++; } } }
   for(const sk of escolhidas){
@@ -1289,7 +1686,7 @@ function telaInicio(){
     <div class="hero">
       <div style="display:flex;flex-direction:column;gap:10px">
         <h2>${feitoHoje?'Treino de hoje feito! Quer mais um?':`${K.ola} Bora para a missão de hoje?`}</h2>
-        <p class="muted">10 questões: 5 de Matemática e 5 de Português. Leva uns 15 minutos. Errou uma? Vem logo uma questão gêmea, parecida, para fixar.${kid==='jaquinho'&&emEtapas()?' Soma de frações vem em 3 etapas (MMC, converter, somar) até ficar verde.':''}${rev?` Hoje voltam ${Math.min(rev,3)} ${Math.min(rev,3)===1?'questão':'questões'} de reforço, das que você errou antes.`:''}</p>
+        <p class="muted">${kid==='maia'?(Object.keys(SKILLS.maia).filter(x=>!SKILLS.maia[x].mat).every(x=>dominadosMaya().includes(x))?'10 questões: 8 de Matemática (pelo menos 3 de tabuada) e 2 de interpretação de texto.':'10 questões: 5 de Matemática (pelo menos 3 de tabuada) e 5 de Português.'):'10 questões: 5 de Matemática e 5 de Português.'} Leva uns 15 minutos. Errou uma? Vem logo uma questão gêmea, parecida, para fixar.${kid==='jaquinho'&&emEtapas()?' Soma de frações vem em 3 etapas (MMC, converter, somar) até ficar verde.':''}${rev?` Hoje voltam ${Math.min(rev,3)} ${Math.min(rev,3)===1?'questão':'questões'} de reforço, das que você errou antes.`:''}</p>
         <div class="stats"><span class="pill">${estrela(true,16)} ${seq} ${seq===1?'dia seguido':'dias seguidos'}</span><span class="pill">Foco: ${f.join(' e ')}</span>${rev?`<span class="pill">Reforço: ${rev}</span>`:''}</div>
       </div>
       <button class="btn" id="start">Começar treino</button>
@@ -1301,6 +1698,8 @@ function telaInicio(){
       <button class="btn ghost" id="simulado">Fazer simulado</button>
     </div>
   </section>
+  <section class="card"><h3>${kid==='maia'?'Como está o seu treino':'Seu nível'}</h3>${textoRegrasTreino(kid)}</section>
+  ${cardRecadosCrianca()}
   ${cardRevisao(kid)}
   ${cardMedalhas(kid)}
   ${cardMeta()}
@@ -1319,18 +1718,20 @@ function telaQuestao(){
   const opts=q.options.map((o,j)=>{ let cls=''; if(resp!=null){ if(sim){ if(j===resp) cls='sel'; } else { if(j===q.a) cls='ok'; else if(j===resp) cls='no'; } }
     if(resp==null && run.pend===j) cls='pend';
     return `<button class="opt ${cls}" id="opt-${j}" data-j="${j}" ${resp!=null?'disabled':''}><span class="l">${letras[j]}</span><span>${esc(o)}</span></button>`; }).join('');
-  const pressa = resp==null && run.avisado ? `<div class="pressa" role="status" id="pressa">Opa, foi rápido demais! ${kid==='maia'?'Leu tudo com calma, linda?':'Leu o enunciado inteiro?'} Se tiver certeza, toque em Confirmar de novo. Se não, troque a alternativa.</div>` : '';
+  const calma = resp==null && run.calmaQ===run.i && (Date.now()-run.qT0)<6000;
+  if(calma && !run.calmaTimer){ run.calmaTimer=true; const i0=run.i; setTimeout(()=>{ if(run){ run.calmaTimer=false; if(run.i===i0 && run.resp[i0]==null) render(); } }, 6050-(Date.now()-run.qT0)); }
+  const pressa = calma ? `<div class="pressa" role="status">Três respostas rápidas seguidas! Respire e leia tudo com calma. O botão Confirmar libera em alguns segundos.</div>` : resp==null && run.avisado ? `<div class="pressa" role="status" id="pressa">Opa, foi rápido demais! ${kid==='maia'?'Leu tudo com calma, linda?':'Leu o enunciado inteiro?'} Se tiver certeza, toque em Confirmar de novo. Se não, troque a alternativa.</div>` : '';
   let fb=''; if(resp!=null && !sim){ const ok=resp===q.a; fb=`<div class="feedback ${ok?'ok':'no'}" role="status"><b>${esc(ok?pick(K.vivas):pick(K.forca))}</b><span>${esc(q.ex)}</span>${q.temGemea?'<span><strong>Agora vem uma gêmea:</strong> uma questão parecida, para fixar o jeito certo.</span>':''}</div>`; }
   const titulo = sim ? 'Simulado' : run.tipo==='refazer' ? 'Refazendo' : run.tipo==='pratica' ? 'Praticando' : '';
   return `<section class="card">
-    <div class="qhead"><span class="row" style="gap:6px">${q.revisao?'<span class="tag ref">Revisão do simulado</span>':''}${q.reforco?'<span class="tag ref">Reforço</span>':''}${q.gemea?'<span class="tag ref">Gêmea</span>':''}${q.etapa?`<span class="tag ref">Etapa ${q.etapa} de 3</span>`:''}${titulo?`<span class="tag ref">${titulo}</span>`:''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${q.nv} de ${DEGRAUS[q.skill]||3}`:''}</span></span><span>${sim?`<span id="timer">${mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
+    <div class="qhead"><span class="row" style="gap:6px">${q.revisao?'<span class="tag ref">Revisão do simulado</span>':''}${q.desafio?'<span class="tag ref">Desafio</span>':''}${q.reforco?'<span class="tag ref">Reforço</span>':''}${q.gemea?'<span class="tag ref">Gêmea</span>':''}${q.etapa?`<span class="tag ref">Etapa ${q.etapa} de 3</span>`:''}${titulo?`<span class="tag ref">${titulo}</span>`:''}<span class="tag">${SKILLS[kid][q.skill].mat?'Matemática':'Português'} · ${SKILLS[kid][q.skill].nome}${q.nv?` · degrau ${q.nv} de ${DEGRAUS[q.skill]||3}`:''}</span></span><span>${sim?`<span id="timer">${mmss(Math.round((Date.now()-run.t0)/1000))}</span> · `:''}${run.i+1} de ${run.qs.length}</span></div>
     <div class="progress" aria-hidden="true"><i style="width:${(run.i+(resp!=null?1:0))/run.qs.length*100}%"></i></div>
     ${q.texto?`<div class="texto">${esc(q.texto)}</div>`:''}
     <p class="qtext">${esc(q.q)}</p>
     <div class="opts">${opts}</div>
-    ${resp==null?`<div class="row"><button class="btn" id="confirmar" ${run.pend==null?'disabled':''}>${run.pend==null?'Escolha uma alternativa':'Confirmar resposta'}</button></div>`:''}
+    ${resp==null?`<div class="row"><button class="btn" id="confirmar" ${run.pend==null||calma?'disabled':''}>${run.pend==null?'Escolha uma alternativa':'Confirmar resposta'}</button></div>`:''}
     ${pressa}${fb}
-    ${resp!=null?`<div class="row"><button class="btn" id="next">${run.i+1<run.qs.length?'Próxima':'Ver resultado'}</button></div>`:''}
+    ${resp!=null?`<div class="row"><button class="btn" id="next">${run.i+1<run.qs.length?'Próxima':'Ver resultado'}</button>${!sim?botaoRecado('data-recado="q"','Mandar recado sobre esta questão'):''}</div>`:''}
   </section>`;
 }
 
@@ -1349,7 +1750,7 @@ function telaFim(){
     <div class="stars">${[0,1,2].map(i=>estrela(i<st,36)).join('')}</div>
     <h2>${msg}</h2>
     ${errSk.length?`<p class="muted">Vale dar uma olhada em: ${errSk.map(s=>SKILLS[kid][s].nome).join(', ')}.</p>`:''}
-    <div class="row" style="justify-content:center">${erradas.length?'<button class="btn" id="refazer">Refazer as que errei</button>':''}<button class="btn ${erradas.length?'ghost':''}" id="estudar-erros">Estudar o que errei</button><button class="btn ghost" id="again">${sim||run.tipo==='pratica'?'Voltar ao início':'Fazer outro treino'}</button></div>
+    <div class="row" style="justify-content:center">${erradas.length?'<button class="btn" id="refazer">Refazer as que errei</button>':''}<button class="btn ${erradas.length?'ghost':''}" id="estudar-erros">Estudar o que errei</button><button class="btn ghost" id="again">${sim||run.tipo==='pratica'?'Voltar ao início':'Fazer outro treino'}</button>${botaoRecado(`data-recado="${errSk[0]||'livre'}"`)}</div>
     ${gab}
   </section>`;
 }
@@ -1418,7 +1819,7 @@ function telaEstudar(focoSk){
       <p class="links">Para pesquisar com o papai ou a mamãe: ${refLinks(X.r).map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(n.split(' (')[0])}</a>`).join(' · ')}</p>`; })()}
     <div class="row" style="gap:8px;align-items:center"><label class="muted" style="font-size:15px">Quantas questões?
       <select class="qtd" data-sk="${sk}" aria-label="Quantidade de questões" style="font:600 16px var(--font-body);padding:8px 10px;margin-left:6px;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)">${opcoesPratica(kid,sk).map(x=>`<option value="${x}" ${x===qtdPratica(kid,sk)?'selected':''}>${x}</option>`).join('')}</select></label>
-      <button class="btn ghost pratica" data-sk="${sk}">Praticar este assunto</button></div>
+      <button class="btn ghost pratica" data-sk="${sk}">Praticar este assunto</button>${botaoRecado(`data-recado="${sk}"`,'Mandar recado sobre este assunto')}</div>
     ${!SKILLS[kid][sk].mat && maxPratica(kid,sk)<20?`<p class="note">Este assunto tem ${maxPratica(kid,sk)} questões no banco.</p>`:''}</article>`; }).join('')}</div>`;
 }
 
@@ -1445,6 +1846,8 @@ function telaPainel(){
       ${k==='maia'?`<div class="seg" role="group" aria-label="Série da Maya em 2027"><button id="serie4" data-serie="4" aria-pressed="${cfg.maiaSerie===4}">4º ano</button><button id="serie5" data-serie="5" aria-pressed="${cfg.maiaSerie===5}">5º ano</button></div>`:'<span class="pill">7º ano em 2027</span>'}</div>
       <div class="row"><span class="pill">${nS} ${nS===1?'treino':'treinos'}</span><span class="pill">${sequencia(k)} ${sequencia(k)===1?'dia seguido':'dias seguidos'}</span><span class="pill">Mat ${acerto(k,true)??'—'}%</span><span class="pill">Port ${acerto(k,false)??'—'}%</span>${ult?`<span class="pill">Último: ${ult.date.slice(8)}/${ult.date.slice(5,7)}</span>`:''}</div>
       ${(()=>{ const rv=devidos(k).length, sims=sessions.filter(x=>x.kid===k&&x.tipo==='simulado').sort((a,b)=>b.ts-a.ts).slice(0,5); return `<p>Reforço pendente: <strong>${rv}</strong> ${rv===1?'questão':'questões'} que ${K.nome} errou e que voltam nos próximos treinos.</p>${sims.length?`<p>Simulados: ${sims.map(x=>`${x.date.slice(8)}/${x.date.slice(5,7)} → <strong>${x.score}/${x.items.length}</strong> (${Math.round(100*x.score/x.items.length)}%)`).join(' · ')}</p>`:'<p class="muted">Nenhum simulado completo ainda.</p>'}`; })()}
+      ${textoRegrasTreino(k)}
+      ${k==='maia'?`<h3>Tabuada do 6 ao 9</h3>${gradeTabuada()}`:''}
       ${k==='maia'?`<p>Troco em degraus: Maya está no <strong>degrau ${degrauTroco()} de 3</strong> (1 = reais inteiros · 2 = ,00 e ,50 · 3 = centavos quebrados). Sobe com 4 acertos seguidos.</p><p>Divisão em degraus: Maya está no <strong>degrau ${degrauDe('divisao')} de 4</strong> (1 = ÷2 a ÷5 · 2 = ÷6 a ÷9 · 3 = com resto · 4 = resultado com 2 algarismos). Sobe com 4 acertos seguidos; desce com 3 erros seguidos.</p>`:''}
       ${k==='jaquinho'?(()=>{ const it=itemsDe(k).filter(i=>i.e), nm=['asas (cruz)','corpo (baixo)','somar']; return `<p>Soma de frações ${emEtapas()?'<strong>em 3 etapas</strong> (até ficar verde)':'já dominada: voltou ao formato normal'}.${it.length?' Acerto por etapa: '+[1,2,3].map(e=>{ const l=it.filter(i=>i.e===e); return `${nm[e-1]} ${l.length?Math.round(100*l.filter(i=>i.ok).length/l.length)+'% ('+l.length+')':'—'}`; }).join(' · ')+'.':''}</p>`; })():''}
       ${textoRevisao(k)}
@@ -1455,7 +1858,7 @@ function telaPainel(){
       ${nS?grafico(k):''}
       <div class="skills">${barras(k)}</div>
     </section>`; };
-  return `<section class="card"><p>Revisão do simulado: por 7 dias depois de cada simulado, o que foi errado volta nos treinos (até 3 por treino) e nas práticas do assunto, sempre com uma explicação antes da questão; acertou depois da explicação, sai da revisão. Como funciona o reforço: o treino diário escolhe mais questões dos assuntos fracos, e toda questão errada volta depois de 1 dia; se acertar, volta de novo depois de 3 dias; acertando de novo, conta como fixada. O simulado semanal mede como estão no formato da prova. Na prova de bolsa do Objetivo e do Etapa caem Português e Matemática, com o conteúdo da série que eles estão terminando.</p><p class="note">Ainda faltam confirmar com as escolas a data da prova e o edital. Quando chegarem, os treinos são ajustados.</p></section>${bloco('jaquinho')}${bloco('maia')}
+  return `${cardRecadosPai()}<section class="card"><p>Revisão do simulado: por 7 dias depois de cada simulado, o que foi errado volta nos treinos (até 3 por treino) e nas práticas do assunto, sempre com uma explicação antes da questão; acertou depois da explicação, sai da revisão. Como funciona o reforço: o treino diário escolhe mais questões dos assuntos fracos, e toda questão errada volta depois de 1 dia; se acertar, volta de novo depois de 3 dias; acertando de novo, conta como fixada. O simulado semanal mede como estão no formato da prova. Na prova de bolsa do Objetivo e do Etapa caem Português e Matemática, com o conteúdo da série que eles estão terminando.</p><p class="note">Ainda faltam confirmar com as escolas a data da prova e o edital. Quando chegarem, os treinos são ajustados.</p></section>${bloco('jaquinho')}${bloco('maia')}
   <section class="card"><h3>Meta da família</h3><p class="muted">Soma as questões dos dois de segunda a domingo. Esta semana: ${metaFamilia().n} de ${metaFamilia().meta}.</p>
   <div class="row"><label class="muted">Meta (questões)<br><input id="metaq" type="number" min="20" step="10" value="${metaFamilia().meta}" style="width:120px;font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></label>
   <label class="muted" style="flex:1 1 220px">Prêmio<br><input id="metap" value="${esc(metaFamilia().premio)}" style="width:100%;font:600 16px var(--font-body);padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)"></label>
@@ -1479,7 +1882,9 @@ function ligar(){
     if(run.resp[run.i]!=null || run.pend==null) return; const j=run.pend, dt=(Date.now()-run.qT0)/1000;
     if(dt<limPressa(run.qs[run.i]) && !run.avisado){ run.avisado=true; run.rap[run.i]=true; render(); return; }   // freio de pressa: pede para confirmar de novo
     run.avisado=false;
-    run.resp[run.i]=j; run.tq[run.i]=Math.round(dt*10)/10; run.pend=null;
+    run.resp[run.i]=j;
+    /* v18 — 3 respostas rápidas demais seguidas: a próxima questão segura o Confirmar por 6 segundos, com aviso de calma. */
+    run.seqRap = run.rap[run.i] ? (run.seqRap||0)+1 : 0; if(run.seqRap>=3){ run.calmaQ=run.i+1; run.seqRap=0; } run.tq[run.i]=Math.round(dt*10)/10; run.pend=null;
     const q=run.qs[run.i];
     /* Errou no treino ou na prática: entra logo depois uma questão gêmea (mesmo assunto, outros números). Até 3 por treino. */
     if(j!==q.a && (run.tipo==='treino'||run.tipo==='pratica') && !q.gemea && !q.etapa && (run.gemeas||0)<3){
